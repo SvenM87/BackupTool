@@ -59,3 +59,10 @@ sudo ./setup_users.sh
 exit
 sudo -u backup_encoder bash
 exit
+nano ~/test.txt 
+exit
+sh ~/setup_users.sh 
+exit
+ls -al /data/encrypted_stage/
+ls -al /data/
+exit
