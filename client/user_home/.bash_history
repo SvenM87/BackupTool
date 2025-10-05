@@ -52,21 +52,16 @@ cat test.txt
 nano test.txt 
 exit
 cd ~
-ssssss
 ls
 ls -al
 sudo ./setup_users.sh 
 exit
 sudo -u backup_encoder bash
 exit
-nano ~/test.txt 
-cat ~/test.txt 
-su backup_client
-sudo su backup_client
-sudo -u backup_encoder bash
-sudo su backup_encoder
-sudo su backup_encoder
-sudo -u backup_encoder bash
-sh ~/setup_users.sh
-sudo -u backup_encoder bash
+nano ~/test.txt
+exit
+sh ~/setup_users.sh 
+exit
+ls -al /data/encrypted_stage/
+ls -al /data/
 exit
