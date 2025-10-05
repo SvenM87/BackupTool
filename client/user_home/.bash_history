@@ -59,3 +59,14 @@ sudo ./setup_users.sh
 exit
 sudo -u backup_encoder bash
 exit
+nano ~/test.txt 
+cat ~/test.txt 
+su backup_client
+sudo su backup_client
+sudo -u backup_encoder bash
+sudo su backup_encoder
+sudo su backup_encoder
+sudo -u backup_encoder bash
+sh ~/setup_users.sh
+sudo -u backup_encoder bash
+exit
