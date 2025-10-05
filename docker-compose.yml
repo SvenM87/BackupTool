@@ -1,0 +1,28 @@
+# /home/user/backup-poc/docker-compose.yml
+version: '3.8'
+
+services:
+  client:
+    build: ./client
+    container_name: backup_client
+    hostname: client
+    volumes:
+      - ./client/user_home:/home/user
+      - ./client/encrypted_data:/data/encrypted_stage
+    networks:
+      - backup_net
+
+  server:
+    #image: alpine:latest
+    build: ./server
+    container_name: backup_server
+    hostname: server
+    #command: tail -f /dev/null
+    networks:
+      - backup_net
+    depends_on:
+      - client
+
+networks:
+  backup_net:
+    driver: bridge
