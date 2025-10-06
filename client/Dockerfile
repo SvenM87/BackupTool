@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-server \
     sudo \
     nano \
-    acl
+    acl \
+	restic
 
 # User-Parameter
 ARG USERNAME=user
