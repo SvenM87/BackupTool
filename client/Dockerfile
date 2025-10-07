@@ -35,6 +35,11 @@ RUN echo "${USER_PASSWORD}" | sudo -S /home/${USERNAME}/setup_users.sh
 USER root
 WORKDIR /
 
+# SSH Schlüssel des Servers laden
+#COPY ./ssh/authorized_keys /home/backup_puller/.ssh/authorized_keys
+#RUN chown backup_puller:backup_puller /home/backup_puller/.ssh/authorized_keys \
+# && chmod 600 /home/backup_puller/.ssh/authorized_keys
+
 # SSH-Konfiguration und Startbefehl
 RUN mkdir -p /var/run/sshd
 
