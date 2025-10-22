@@ -15,21 +15,11 @@ if ! command -v docker >/dev/null 2>&1; then
     exit 1
 fi
 
-COMPOSE_COMMAND="docker compose"
-if ! docker compose version >/dev/null 2>&1; then
-    if command -v docker-compose >/dev/null 2>&1; then
-        COMPOSE_COMMAND="docker-compose"
-    else
-        echo "Weder 'docker compose' noch 'docker-compose' ist verfügbar." >&2
-        exit 1
-    fi
-fi
-
 PROJECT_NAME=${PROJECT_NAME:-poc_backup_e2e}
 export PULL_USER_PASSWORD=${PULL_USER_PASSWORD:-e2e-test-password}
 
 cleanup() {
-    ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" down -v >/dev/null 2>&1 || true
+    docker-compose -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" down -v >/dev/null 2>&1 || true
     rm -rf "${TMP_DIR}"
 }
 trap cleanup EXIT
@@ -44,19 +34,19 @@ export CLIENT_ENCRYPTED_VOLUME="${ENCRYPTED_STAGE}"
 export SERVER_REPO_VOLUME="${SERVER_REPO}"
 
 echo "=> Baue und starte Test-Stack..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d --build
+docker-compose -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d --build
 
 echo "=> Prüfe, ob der Client-SSHD läuft..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash -c "until pgrep -f 'sshd' >/dev/null; do sleep 1; done"
+docker-compose -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash -c "until pgrep -f 'sshd' >/dev/null; do sleep 1; done"
 
 echo "=> Führe Schlüsseltausch durch..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server /usr/local/bin/push_ssh_key.sh
+docker-compose -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server /usr/local/bin/push_ssh_key.sh
 
 echo "=> Synchronisiere Restic-Repository..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server /usr/local/bin/pull_restic_repo.sh
+docker-compose -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server /usr/local/bin/pull_restic_repo.sh
 
 echo "=> Prüfe synchronisierte Dateien..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server test -f /data/restic_repo/config
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server test -f /data/restic_repo/test.txt
+docker-compose -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server test -f /data/restic_repo/config
+docker-compose -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server test -f /data/restic_repo/test.txt
 
 echo "=> End-to-End-Test erfolgreich abgeschlossen."
