@@ -31,6 +31,8 @@ Es gibt einen automatisierten Testlauf, der den kompletten Ablauf (Schlüsseltau
 
 1. Docker muss verfügbar sein (`docker compose` oder `docker-compose`).
 2. Script aufrufen: `tests/e2e/run.sh`
-3. Der Lauf erstellt temporäre Volumes unter `tests/tmp`, startet den Stack mit `docker-compose.test.yml`, führt `push_ssh_key.sh` und `pull_restic_repo.sh` aus und validiert das Ergebnis.
+3. Der Lauf erstellt temporäre Verzeichnisse unter `tests/tmp`, setzt die Compose-Volume-Pfade entsprechend (`CLIENT_ENCRYPTED_VOLUME`, `SERVER_REPO_VOLUME`), startet den Stack, führt `push_ssh_key.sh` und `pull_restic_repo.sh` aus und validiert das Ergebnis.
 
 Nach Abschluss werden Container und temporäre Daten automatisch entfernt.
+
+Die SSH-Schlüssel werden bei jedem Durchlauf neu erzeugt und nicht mehr über Host-Volumes persistiert. Wenn andere Pfade für Daten oder Repo verwendet werden sollen, lassen sie sich via Umgebungsvariablen (`CLIENT_USER_HOME_VOLUME`, `CLIENT_ENCRYPTED_VOLUME`, `SERVER_REPO_VOLUME`) überschreiben.
