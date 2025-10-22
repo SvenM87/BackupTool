@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
     nano \
     acl \
+    rsync \
 	restic
 
 # User-Parameter
