@@ -10,9 +10,8 @@ services:
     container_name: backup_client
     hostname: client
     volumes:
-      - ./client/user_home:/home/user
-      - ./client/encrypted_data:/data/encrypted_stage
-      - ./ssh/authorized_keys:/home/backup_puller/.ssh/authorized_keys
+      - ${CLIENT_USER_HOME_VOLUME:-./client/user_home}:/home/user
+      - ${CLIENT_ENCRYPTED_VOLUME:-./client/encrypted_data}:/data/encrypted_stage
     networks:
       - backup_net
 
@@ -23,8 +22,7 @@ services:
     hostname: server
     #command: tail -f /dev/null
     volumes:
-      - ./ssh/server:/root/.ssh
-      - ./server/data:/data/restic_repo
+      - ${SERVER_REPO_VOLUME:-./server/data}:/data/restic_repo
     environment:
       CLIENT_HOST: ${CLIENT_HOST:-client}
       CLIENT_PORT: ${CLIENT_PORT:-22}
