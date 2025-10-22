@@ -27,12 +27,12 @@ Weitere Parameter:
 
 ## End-to-End-Tests in Docker
 
-Es gibt einen automatisierten Testlauf, der den kompletten Ablauf (Schlüsseltausch, Repo-Sync) gegen eine Test-Fixturn überprüft.
+Es gibt einen automatisierten Testlauf, der den kompletten Ablauf (Schlüsseltausch, Restic-Backup, Repo-Sync) mit synthetischen Testdaten durchspielt.
 
 1. Docker muss verfügbar sein (`docker compose` oder `docker-compose`).
 2. Script aufrufen: `tests/e2e/run.sh`
-3. Der Lauf erstellt temporäre Verzeichnisse unter `tests/tmp`, setzt die Compose-Volume-Pfade entsprechend (`CLIENT_ENCRYPTED_VOLUME`, `SERVER_REPO_VOLUME`), startet den Stack, führt `push_ssh_key.sh` und `pull_restic_repo.sh` aus und validiert das Ergebnis.
+3. Der Lauf erstellt temporäre Verzeichnisse unter `tests/tmp`, füllt `/home/user/testdata` mit Prüfinhalten, initialisiert per Restic ein Repository unter `/data/encrypted_stage`, sichert die Testdaten verschlüsselt, führt anschließend `push_ssh_key.sh` sowie `pull_restic_repo.sh` aus und überprüft, dass die verschlüsselten Artefakte auf dem Server landen (inkl. Negativ-Check auf Klartext).
 
 Nach Abschluss werden Container und temporäre Daten automatisch entfernt.
 
-Die SSH-Schlüssel werden bei jedem Durchlauf neu erzeugt und nicht mehr über Host-Volumes persistiert. Wenn andere Pfade für Daten oder Repo verwendet werden sollen, lassen sie sich via Umgebungsvariablen (`CLIENT_USER_HOME_VOLUME`, `CLIENT_ENCRYPTED_VOLUME`, `SERVER_REPO_VOLUME`) überschreiben.
+Die SSH-Schlüssel werden bei jedem Durchlauf neu erzeugt und nicht mehr über Host-Volumes persistiert. Wenn andere Pfade für Daten oder Repo verwendet werden sollen, lassen sie sich via Umgebungsvariablen (`CLIENT_USER_HOME_VOLUME`, `CLIENT_ENCRYPTED_VOLUME`, `SERVER_REPO_VOLUME`) überschreiben. Das für den Test verwendete Restic-Passwort kann über `RESTIC_PASSWORD_VALUE` gesetzt werden.
