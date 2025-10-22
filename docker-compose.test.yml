@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  client:
+    volumes:
+      - ./tests/tmp/encrypted_stage:/data/encrypted_stage
+      - ./tests/tmp/client_authorized_keys:/home/backup_puller/.ssh/authorized_keys
+  server:
+    volumes:
+      - ./tests/tmp/server_ssh:/root/.ssh
+      - ./tests/tmp/server_repo:/data/restic_repo
