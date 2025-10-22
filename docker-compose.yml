@@ -24,6 +24,7 @@ services:
     #command: tail -f /dev/null
     volumes:
       - ./ssh/server:/root/.ssh
+      - ./server/data:/data/restic_repo
     environment:
       CLIENT_HOST: ${CLIENT_HOST:-client}
       CLIENT_PORT: ${CLIENT_PORT:-22}
