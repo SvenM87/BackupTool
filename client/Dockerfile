@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # User-Parameter
 ARG USERNAME=user
 ARG USER_PASSWORD=123456
+ARG PULL_USER_PASSWORD=puller-temp-password
 
 # Nutzer erstellen
 RUN useradd -m -s /bin/bash ${USERNAME} \
@@ -25,11 +26,13 @@ COPY scripts/setup_users.sh /home/${USERNAME}/setup_users.sh
 RUN chown ${USERNAME}:${USERNAME} /home/${USERNAME}/setup_users.sh \
     && chmod +x /home/${USERNAME}/setup_users.sh
 
+ENV PULL_USER_PASSWORD=${PULL_USER_PASSWORD}
+
 # Zum neuen Nutzer wechseln und Skript ausführen
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 # 'echo ... |' dient dazu, das Sudo-Passwort zu übergeben
-RUN echo "${USER_PASSWORD}" | sudo -S /home/${USERNAME}/setup_users.sh
+RUN echo "${USER_PASSWORD}" | sudo -SE /home/${USERNAME}/setup_users.sh
 
 # Zurück zu root, Service starten
 USER root

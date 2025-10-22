@@ -3,7 +3,10 @@ version: '3.8'
 
 services:
   client:
-    build: ./client
+    build:
+      context: ./client
+      args:
+        PULL_USER_PASSWORD: ${PULL_USER_PASSWORD:-puller-temp-password}
     container_name: backup_client
     hostname: client
     volumes:
@@ -14,13 +17,17 @@ services:
       - backup_net
 
   server:
-    #image: alpine:latest
-    build: ./server
+    build:
+      context: ./server
     container_name: backup_server
     hostname: server
     #command: tail -f /dev/null
     volumes:
       - ./ssh/server:/root/.ssh
+    environment:
+      CLIENT_HOST: ${CLIENT_HOST:-client}
+      CLIENT_PORT: ${CLIENT_PORT:-22}
+      PULL_USER_PASSWORD: ${PULL_USER_PASSWORD:-puller-temp-password}
     networks:
       - backup_net
     depends_on:

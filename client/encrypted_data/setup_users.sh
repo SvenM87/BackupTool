@@ -10,6 +10,7 @@ DATA_OWNER=${SUDO_USER}
 
 ENCODER_USER="backup_encoder"
 PULL_USER="backup_puller"
+PULL_USER_PASSWORD=${PULL_USER_PASSWORD:-"puller-temp-password"}
 
 SOURCE_DIR="/home/${DATA_OWNER}"
 ENCRYPTED_DIR="/data/encrypted_stage"
@@ -24,6 +25,9 @@ fi
 if ! id -u ${PULL_USER} > /dev/null 2>&1; then
     sudo adduser --system --group --home /home/${PULL_USER} --shell /bin/bash ${PULL_USER}
 fi
+
+# Temporäres Passwort setzen, damit der Schlüsseltransfer per SSH (Passwort) möglich ist
+echo "${PULL_USER}:${PULL_USER_PASSWORD}" | sudo chpasswd
 
 # --- 3. Verzeichnisse und Berechtigungen anpassen ---
 echo "=> Konfiguriere Verzeichnisse und Berechtigungen..."
@@ -53,5 +57,19 @@ sudo touch ${AUTH_KEYS_FILE}
 sudo chown -R ${PULL_USER}:${PULL_USER} ${SSH_DIR}
 sudo chmod 700 ${SSH_DIR}
 sudo chmod 600 ${AUTH_KEYS_FILE}
+
+# Dem Pull-Nutzer erlauben, das eigene Passwort zu sperren, nachdem der Schlüssel kopiert wurde
+SUDOERS_FILE="/etc/sudoers.d/${PULL_USER}"
+if [ ! -f ${SUDOERS_FILE} ]; then
+    sudo bash -c "echo '${PULL_USER} ALL=(root) NOPASSWD: /usr/bin/passwd -l ${PULL_USER}' > ${SUDOERS_FILE}"
+    sudo chmod 440 ${SUDOERS_FILE}
+fi
+
+# Passwort-Authentifizierung explizit aktivieren (wird nach dem Schlüsseltransfer wieder deaktiviert)
+if sudo grep -qE '^\s*PasswordAuthentication' /etc/ssh/sshd_config; then
+    sudo sed -i 's|^\s*PasswordAuthentication.*|PasswordAuthentication yes|' /etc/ssh/sshd_config
+else
+    echo "PasswordAuthentication yes" | sudo tee -a /etc/ssh/sshd_config > /dev/null
+fi
 
 echo "Setup durch ${DATA_OWNER} erfolgreich abgeschlossen."
