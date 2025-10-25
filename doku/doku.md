@@ -141,8 +141,11 @@ Quellen:
 - Docker Compose Referenz: https://docs.docker.com/reference/compose-file/
 - Dockerfile Dokumentation: https://docs.docker.com/get-started/docker-concepts/building-images/writing-a-dockerfile/
 - Bash Scripting Tutorial: https://www.freecodecamp.org/news/bash-scripting-tutorial-linux-shell-script-and-command-line-for-beginners/
+- Bash Dokumentation: https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html
 
 ### TEST DES SYSTEMS
+
+#### mauneller Test
 1. Stack bauen und starten  
    - `docker-compose up --build -d`  
    - Sobald die Container laufen, lassen sich Logs per `docker-compose logs -f` prüfen.
@@ -158,3 +161,14 @@ Quellen:
    - `docker exec -it backup_server sh` und `cat ~/.ssh/id_rsa.pub` auf dem Server ausgeben.  
    - `docker exec -it -u backup_puller backup_client bash` und den Schlüssel unter `~/.ssh/authorized_keys` hinterlegen.  
    - Vom Server aus den Zugriff verifizieren: `scp backup_puller@client:/data/encrypted_stage/* /tmp/`.
+
+### AUTOMATISIERTER TESTLAUF
+Für wiederholbare Prüfungen existiert ein End-to-End-Skript (`tests/e2e/run.sh`), das den kompletten Ablauf inklusive Verschlüsselung, Schlüsseltausch und Repository-Sync automatisiert durchführt. Der Test setzt eine funktionsfähige Docker-Umgebung voraus und konfiguriert seine Arbeitsverzeichnisse vollständig innerhalb des Projektordners.
+
+1. Aufruf des Skripts: `tests/e2e/run.sh`. Das Skript baut die Images neu und startet die benötigten Container.
+2. Im Client werden temporäre Testdaten unter `/home/user/testdata` erzeugt, ein frisches Restic-Repository unter `/data/encrypted_stage` initialisiert und ein verschlüsseltes Backup erstellt.
+3. Anschließend erfolgen `push_ssh_key.sh` und `pull_restic_repo.sh`, um den SSH-basierten Schlüsseltausch sowie den Pull des verschlüsselten Repos in den Server-Container zu validieren.
+4. Der Test prüft, dass auf dem Server ausschließlich Ciphertext landet und kein Klartext in `./server/data` vorhanden ist; Negativprüfungen auf Klartext-Strings sind Teil des Skripts.
+5. Nach erfolgreichem Durchlauf räumt das Skript Container und temporäre Artefakte (`tests/tmp`) auf.
+
+Relevante Parameter können über Umgebungsvariablen gesteuert werden (z. B. `CLIENT_USER_HOME_VOLUME`, `CLIENT_ENCRYPTED_VOLUME`, `SERVER_REPO_VOLUME`, `RESTIC_PASSWORD_VALUE`). Dadurch lassen sich alternative Speicherpfade oder Passwörter für differenzierte Testläufe definieren.
