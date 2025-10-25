@@ -25,6 +25,18 @@ Weitere Parameter:
 - `REMOTE_REPO_PATH` – Pfad zum Restic-Repo auf dem Client (Standard: `/data/encrypted_stage`)
 - `LOCAL_REPO_PATH` – Zielpfad im Server-Container (Standard: `/data/restic_repo`)
 
+## Manuelles Testen mit Docker
+
+1. Stack bauen und im Hintergrund starten: `docker-compose up --build -d`.
+2. In den Client-Container einloggen: `docker exec -it -u user backup_client bash`.
+3. Innerhalb des Containers in den Systembenutzer wechseln: `sudo -u backup_encoder bash`.
+
+| Befehl                     | Stoppt Container | Entfernt Container | Entfernt Netzwerk | Entfernt Volumes |
+|----------------------------|------------------|--------------------|-------------------|------------------|
+| `docker-compose stop`      | ✅               | ❌                 | ❌                | ❌               |
+| `docker-compose down`      | ✅               | ✅                 | ✅                | ❌               |
+| `docker-compose down -v`   | ✅               | ✅                 | ✅                | ✅               |
+
 ## End-to-End-Tests in Docker
 
 Es gibt einen automatisierten Testlauf, der den kompletten Ablauf (Schlüsseltausch, Restic-Backup, Repo-Sync) mit synthetischen Testdaten durchspielt.
