@@ -131,39 +131,30 @@
 ## DOKUMENTATION
 
 ### TESTUMGEBUNG (DOCKER)
-Die Architektur der Testumgebung basiert auf einer Client-Server-Struktur, welche eine funktionsfähige SSH-Verbindung zwischen den beiden Komponenten voraussetzt. Um die Datenpersistenz über den Lebenszyklus der Container hinaus zu gewährleisten, werden sowohl die Testdaten (im Verzeichnis /home/user) als auch die verschlüsselten Daten des Clients (/data/encrypted_stage) in einem persistenten Speichervolumen vorgehalten. Notwendige, container-spezifische Konfigurationen oder Software-Abhängigkeiten werden über eine separate Dockerfile deklariert. Als technische Referenz für die Konfigurationssyntax dient die offizielle Dokumentation von Docker für Compose-Dateien (https://docs.docker.com/reference/compose-file/ )
+Die Architektur der Testumgebung basiert auf einer Client-Server-Struktur, welche eine funktionsfähige SSH-Verbindung zwischen den beiden Komponenten voraussetzt. Um die Datenpersistenz über den Lebenszyklus der Container hinaus zu gewährleisten, werden sowohl die Testdaten (im Verzeichnis /home/user) als auch die verschlüsselten Daten des Clients (/data/encrypted_stage) in einem persistenten Speichervolumen vorgehalten. Notwendige, container-spezifische Konfigurationen oder Software-Abhängigkeiten werden über eine separate Dockerfile deklariert.
 
-Für den Betrieb des Client-Containers ist die Konfiguration mehrerer Benutzerkonten erforderlich. Neben einem allgemeinen Systembenutzer (user) werden dedizierte Benutzer für die Ausführung des Verschlüsselungs- (encrypt) und des Datenabrufprozesses (pull) angelegt.
-Die Software-Ausstattung des Containers wird zum Build-Zeitpunkt durch die Installation der Pakete OpenSSH-Server, Nano und Access Control Lists (ACL) erweitert. Der Einsatz von ACL ermöglicht dabei eine fein-granulare Steuerung der Dateiberechtigungen. Die initialen Benutzerkonten, die für die Backup-Prozesse benötigt werden, werden durch ein Skript automatisiert erstellt. In einem produktiven System würde dieses Skript zur einmaligen Initialisierung der Umgebung dienen. Als technische Referenz dient die offizielle Dokumentation von Docker zu Dockerfiles (https://docs.docker.com/get-started/docker-concepts/building-images/writing-a-dockerfile/) sowie eine Reference zum Scripting in Bash (https://www.freecodecamp.org/news/bash-scripting-tutorial-linux-shell-script-and-command-line-for-beginners/).
+Für den Betrieb des Client-Containers ist die Konfiguration mehrerer Benutzerkonten erforderlich. Neben einem allgemeinen Systembenutzer (`user`) werden die dedizierten Nutzer `backup_encoder` (verschlüsselt und bereitet Daten vor) sowie `backup_puller` (stellt die verschlüsselten Artefakte bereit) angelegt. Die Software-Ausstattung des Containers wird zum Build-Zeitpunkt durch die Installation von OpenSSH-Server, sudo, nano, acl, rsync und restic erweitert. Der Einsatz von ACL ermöglicht eine fein-granulare Steuerung der Dateiberechtigungen. Die initialen Benutzerkonten, die für die Backup-Prozesse benötigt werden, werden durch ein Skript automatisiert erstellt und würden in einem produktiven System der einmaligen Initialisierung dienen.
 
-Der Server-Container basiert auf dem minimalen alpine:latest Image, um eine schlanke und sichere Laufzeitumgebung zu gewährleisten. Die primäre Konfiguration während des Build-Prozesses umfasst die Erstellung eines SSH-Schlüsselpaares (RSA, 4096 Bit) für den root-Benutzer. Dieses Schlüsselpaar wird direkt im Image hinterlegt und dient der passwortlosen Authentifizierung für ausgehende Verbindungen.
+Der Server-Container basiert auf dem minimalen alpine:latest Image, um eine schlanke und sichere Laufzeitumgebung zu gewährleisten. Die primäre Konfiguration während des Build-Prozesses umfasst die Erstellung eines SSH-Schlüsselpaares (RSA, 4096 Bit) für den root-Benutzer. Dieses Schlüsselpaar wird direkt im Image hinterlegt und dient der passwortlosen Authentifizierung für ausgehende Verbindungen. Für den Betrieb werden nano, openssh-client, sshpass und rsync installiert. Während nano als einfacher Texteditor zur Verfügung steht, ermöglicht der openssh-client zusammen mit sshpass den Schlüsseltausch sowie passwortgestützte Erstverbindungen zum Client. Um den Container nach dem Start dauerhaft aktiv zu halten und ein sofortiges Beenden zu verhindern, wird der Befehl tail -f /dev/null als Standardkommando ausgeführt.
 
-Die Software-Ausstattung wird durch die Installation der Pakete Nano und OpenSSH-Client ergänzt. Während nano als einfacher Texteditor zur Verfügung steht, ermöglicht der openssh-client dem Container, SSH-Verbindungen zu anderen Systemen – wie dem Client-Container – zu initiieren. Um den Container nach dem Start dauerhaft aktiv zu halten und ein sofortiges Beenden zu verhindern, wird der Befehl tail -f /dev/null als Standardkommando ausgeführt. Als technische Referenz für die Implementierung diente ebenfalls die offizielle Dokumentation von Docker zu Dockerfiles.
+Quellen:
+- Docker Compose Referenz: https://docs.docker.com/reference/compose-file/
+- Dockerfile Dokumentation: https://docs.docker.com/get-started/docker-concepts/building-images/writing-a-dockerfile/
+- Bash Scripting Tutorial: https://www.freecodecamp.org/news/bash-scripting-tutorial-linux-shell-script-and-command-line-for-beginners/
 
 ### TEST DES SYSTEMS
-- Build
-    - docker-compose build --no-cache
-    - docker-compose up -d
-    - Alle Steps erfolgreich -> i.O.
-- Testdaten auf dem Client erstellen
-    - docker exec -it -u user backup_client bash
-    - nano ~/test.txt 
-    - cat ~/test.txt -> i.O.
-- backup_encoder testen
-    - sudo -u backup_encoder bash
-    - kann /home/user lesen, aber nicht schreiben
-        - nano /home/user/test.txt
-        - [ Error writing /home/user/test.txt: Permission denied ]
-    - Kann user daten in data Verzeichnis kopieren
-        - cp /home/user/* /data/encrypted_stage/
-        - ls /data/encrypted_stage/
-            - setup_users.sh  test.txt
-- SSH 
-    - Key Server -> Client
-        - docker exec -it backup_server sh
-        - cat ~/.ssh/id_rsa.pub
-        - docker exec -it -u backup_puller backup_client bash
-        - nano ~/.ssh/authorized_keys
-    - test vom Server
-        - scp backup_puller@client:/data/encrypted_stage/* /tmp/
-        - Dateien wurden übertragen
+1. Stack bauen und starten  
+   - `docker-compose up --build -d`  
+   - Sobald die Container laufen, lassen sich Logs per `docker-compose logs -f` prüfen.
+2. Testdaten auf dem Client anlegen  
+   - `docker exec -it -u user backup_client bash`  
+   - `nano ~/test.txt` und Beispielinhalt speichern.  
+   - `cat ~/test.txt` sicherstellt, dass die Datei verfügbar ist.
+3. Wechsel und Berechtigungen für `backup_encoder` prüfen  
+   - Innerhalb des Containers: `sudo -u backup_encoder bash`.  
+   - Lesen funktioniert (`cat /home/user/test.txt`), Schreiben wird verweigert (`nano /home/user/test.txt` → *Permission denied*).  
+   - Kopieren in das verschlüsselte Staging: `cp /home/user/* /data/encrypted_stage/` und anschließend `ls /data/encrypted_stage/`.
+4. SSH-Schlüsseltausch und Pull testen  
+   - `docker exec -it backup_server sh` und `cat ~/.ssh/id_rsa.pub` auf dem Server ausgeben.  
+   - `docker exec -it -u backup_puller backup_client bash` und den Schlüssel unter `~/.ssh/authorized_keys` hinterlegen.  
+   - Vom Server aus den Zugriff verifizieren: `scp backup_puller@client:/data/encrypted_stage/* /tmp/`.
