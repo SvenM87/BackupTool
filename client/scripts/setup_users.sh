@@ -42,11 +42,14 @@ echo "=> Richte gruppenbasierte Zugriffsrechte ein..."
 
 # 'backup_encoder' darf Daten vom DATA_OWNER lesen
 #sudo usermod -aG ${DATA_OWNER} ${ENCODER_USER}
-sudo setfacl -m u:${ENCODER_USER}:r-x ${SOURCE_DIR}
+# set access ACLs and default ACLs recursively so existing and new files are readable by the encoder user
+sudo setfacl -R -m u:${ENCODER_USER}:rx ${SOURCE_DIR}
+sudo setfacl -R -m d:u:${ENCODER_USER}:rx ${SOURCE_DIR}
 
 # 'backup_puller' darf verschlüsselte Daten vom ENCODER_USER lesen
 #sudo usermod -aG ${ENCODER_USER} ${PULL_USER}
-sudo setfacl -m u:${PULL_USER}:r-x ${ENCRYPTED_DIR}
+sudo setfacl -R -m u:${PULL_USER}:r ${ENCRYPTED_DIR}
+sudo setfacl -R -m d:u:${PULL_USER}:r ${ENCRYPTED_DIR}
 
 # SSH-Zugang für den Pull-Nutzer vorbereiten
 SSH_DIR="/home/${PULL_USER}/.ssh"

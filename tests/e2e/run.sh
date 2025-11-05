@@ -39,7 +39,7 @@ cleanup() {
     sudo rm -rf "${TMP_DIR}"
     echo "=> Bereinigung abgeschlossen."
 }
-trap cleanup EXIT
+# trap cleanup EXIT
 
 echo "=> Vorbereitung des Test-Workspaces..."
 cleanup
@@ -55,15 +55,31 @@ cleanup
 # export SERVER_REPO_VOLUME="${SERVER_REPO}"
 
 echo "=> Baue und starte Test-Stack..."
+# ohne Cache bauen
+# ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" build --no-cache
+# standard mit Cache bauen und starten
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d --build
 
 echo "=> Prüfe, ob der Client-SSHD läuft..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash -c "until pgrep -f 'sshd' >/dev/null; do sleep 1; done"
 
+echo "=> Setze ACL-Berechtigungen (ACLs) zur Laufzeit..."
+# 'backup_encoder' erlauben, /home/user zu betreten UND /home/user/testdata zu lesen. 
+# redundant, da in setup_users.sh schon gesetzt, aber muss zur Laufzeit ausgeführt werden,
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T --user root client bash -c " \
+    setfacl -R -m u:backup_encoder:rX /home/user && \
+    setfacl -R -m d:u:backup_encoder:rX /home/user && \
+    setfacl -R -m u:backup_puller:rX /data/encrypted_stage && \
+    setfacl -R -m d:u:backup_puller:rX /data/encrypted_stage"
+
 echo "=> Initialisiere Restic-Repository und erstelle Backup..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash -c "export RESTIC_PASSWORD='${RESTIC_PASSWORD_VALUE}'; if [ ! -f /data/encrypted_stage/config ]; then restic -r /data/encrypted_stage init; fi"
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash -c "export RESTIC_PASSWORD='${RESTIC_PASSWORD_VALUE}'; restic -r /data/encrypted_stage backup /home/user/testdata"
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash -c "export RESTIC_PASSWORD='${RESTIC_PASSWORD_VALUE}'; restic -r /data/encrypted_stage snapshots"
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_encoder client bash -c "export RESTIC_PASSWORD='${RESTIC_PASSWORD_VALUE}'; if [ ! -f /data/encrypted_stage/config ]; then restic -r /data/encrypted_stage init --no-cache; fi"
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_encoder client bash -c "export RESTIC_PASSWORD='${RESTIC_PASSWORD_VALUE}'; restic -r /data/encrypted_stage backup /home/user/testdata --no-cache"
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_encoder client bash -c "export RESTIC_PASSWORD='${RESTIC_PASSWORD_VALUE}'; restic -r /data/encrypted_stage snapshots --no-cache"
+
+echo "=> Korrigiere ACL-Maske für rsync..."
+# restric setzt überschreibt die ACL-Maske, daher hier korrigieren
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T --user root client setfacl -R -m u:backup_puller:rX /data/encrypted_stage
 
 echo "=> Führe Schlüsseltausch durch..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server /usr/local/bin/push_ssh_key.sh

@@ -47,6 +47,7 @@ WORKDIR /
 
 # SSH-Konfiguration und Startbefehl
 RUN mkdir -p /var/run/sshd
+RUN ssh-keygen -A
 
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D"]

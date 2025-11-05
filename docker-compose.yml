@@ -8,8 +8,10 @@ services:
       args:
         PULL_USER_PASSWORD: ${PULL_USER_PASSWORD:-puller-temp-password}
     container_name: backup_client
-    hostname: client
+    hostname: client    
     # volumes:
+      # - ${CLIENT_USER_HOME_VOLUME:-./client/data/user_home}:/home/user
+      # - ${CLIENT_ENCRYPTED_VOLUME:-./client/data/encrypted_data}:/data/encrypted_stage
     networks:
       - backup_net
 
@@ -19,8 +21,8 @@ services:
     container_name: backup_server
     hostname: server
     #command: tail -f /dev/null
-    volumes:
-      - ${SERVER_REPO_VOLUME:-./server/data}:/data/restic_repo
+    # volumes:
+      # - ${SERVER_REPO_VOLUME:-./server/data}:/data/restic_repo
     environment:
       CLIENT_HOST: ${CLIENT_HOST:-client}
       CLIENT_PORT: ${CLIENT_PORT:-22}
