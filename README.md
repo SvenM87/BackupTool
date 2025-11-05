@@ -33,9 +33,10 @@ Weitere Parameter:
 
 | Befehl                     | Stoppt Container | Entfernt Container | Entfernt Netzwerk | Entfernt Volumes |
 |----------------------------|------------------|--------------------|-------------------|------------------|
-| `docker-compose stop`      | ✅               | ❌                 | ❌                | ❌               |
-| `docker-compose down`      | ✅               | ✅                 | ✅                | ❌               |
-| `docker-compose down -v`   | ✅               | ✅                 | ✅                | ✅               |
+| `docker-compose stop`      | ✅               | ❌                | ❌                | ❌              |
+| `docker-compose down`      | ✅               | ✅                | ✅                | ❌              |
+| `docker-compose down -v`   | ✅               | ✅                | ✅                | ✅              |
+(-p poc_backup_e2e)
 
 ## End-to-End-Tests in Docker
 

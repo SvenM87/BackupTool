@@ -36,7 +36,8 @@ export LOCAL_UID LOCAL_GID
 cleanup() {
     echo "=> Bereinige Test-Workspace..."
     ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" down -v >/dev/null 2>&1 || true
-    rm -rf "${TMP_DIR}"
+    sudo rm -rf "${TMP_DIR}"
+    echo "=> Bereinigung abgeschlossen."
 }
 trap cleanup EXIT
 
