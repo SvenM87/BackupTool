@@ -31,6 +31,7 @@ PROJECT_NAME=${PROJECT_NAME:-poc_backup_e2e}
 export PULL_USER_PASSWORD=${PULL_USER_PASSWORD:-e2e-test-password}
 
 cleanup() {
+    echo "=> Bereinige Test-Workspace..."
     ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" down -v >/dev/null 2>&1 || true
     rm -rf "${TMP_DIR}"
 }
