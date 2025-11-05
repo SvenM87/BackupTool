@@ -9,6 +9,7 @@ services:
         PULL_USER_PASSWORD: ${PULL_USER_PASSWORD:-puller-temp-password}
     container_name: backup_client
     hostname: client
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     volumes:
       - ${CLIENT_USER_HOME_VOLUME:-./client/user_home}:/home/user
       - ${CLIENT_ENCRYPTED_VOLUME:-./client/encrypted_data}:/data/encrypted_stage
@@ -20,6 +21,7 @@ services:
       context: ./server
     container_name: backup_server
     hostname: server
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     #command: tail -f /dev/null
     volumes:
       - ${SERVER_REPO_VOLUME:-./server/data}:/data/restic_repo

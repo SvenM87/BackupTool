@@ -30,6 +30,10 @@ fi
 PROJECT_NAME=${PROJECT_NAME:-poc_backup_e2e}
 export PULL_USER_PASSWORD=${PULL_USER_PASSWORD:-e2e-test-password}
 
+LOCAL_UID=${LOCAL_UID:-$(id -u)}
+LOCAL_GID=${LOCAL_GID:-$(id -g)}
+export LOCAL_UID LOCAL_GID
+
 cleanup() {
     echo "=> Bereinige Test-Workspace..."
     ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" down -v >/dev/null 2>&1 || true
