@@ -23,9 +23,10 @@ RUN useradd -m -s /bin/bash ${USERNAME} \
     && usermod -aG sudo ${USERNAME}
 
 # Setup-Skript kopieren und ausführen
+COPY data/user_home/ /home/${USERNAME}/
 COPY scripts/setup_users.sh /home/${USERNAME}/setup_users.sh
-RUN chown ${USERNAME}:${USERNAME} /home/${USERNAME}/setup_users.sh \
-    && chmod +x /home/${USERNAME}/setup_users.sh
+RUN chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/ && \
+    chmod +x /home/${USERNAME}/setup_users.sh
 
 ENV PULL_USER_PASSWORD=${PULL_USER_PASSWORD}
 
