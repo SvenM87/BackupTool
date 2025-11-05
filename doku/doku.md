@@ -131,11 +131,13 @@
 ## DOKUMENTATION
 
 ### TESTUMGEBUNG (DOCKER)
-Die Architektur der Testumgebung basiert auf einer Client-Server-Struktur, welche eine funktionsfähige SSH-Verbindung zwischen den beiden Komponenten voraussetzt. Um die Datenpersistenz über den Lebenszyklus der Container hinaus zu gewährleisten, werden sowohl die Testdaten (im Verzeichnis /home/user) als auch die verschlüsselten Daten des Clients (/data/encrypted_stage) in einem persistenten Speichervolumen vorgehalten. Notwendige, container-spezifische Konfigurationen oder Software-Abhängigkeiten werden über eine separate Dockerfile deklariert.
+Die Architektur der Testumgebung basiert auf einer Client-Server-Struktur, welche eine funktionsfähige SSH-Verbindung zwischen den beiden Komponenten initialisiert. Das Standard-Setup läuft vollständig innerhalb der Container. Notwendige, container-spezifische Konfigurationen oder Software-Abhängigkeiten werden über eine separate Dockerfile deklariert.
 
 Für den Betrieb des Client-Containers ist die Konfiguration mehrerer Benutzerkonten erforderlich. Neben einem allgemeinen Systembenutzer (`user`) werden die dedizierten Nutzer `backup_encoder` (verschlüsselt und bereitet Daten vor) sowie `backup_puller` (stellt die verschlüsselten Artefakte bereit) angelegt. Die Software-Ausstattung des Containers wird zum Build-Zeitpunkt durch die Installation von OpenSSH-Server, sudo, nano, acl, rsync und restic erweitert. Der Einsatz von ACL ermöglicht eine fein-granulare Steuerung der Dateiberechtigungen. Die initialen Benutzerkonten, die für die Backup-Prozesse benötigt werden, werden durch ein Skript automatisiert erstellt und würden in einem produktiven System der einmaligen Initialisierung dienen.
 
 Der Server-Container basiert auf dem minimalen alpine:latest Image, um eine schlanke und sichere Laufzeitumgebung zu gewährleisten. Die primäre Konfiguration während des Build-Prozesses umfasst die Erstellung eines SSH-Schlüsselpaares (RSA, 4096 Bit) für den root-Benutzer. Dieses Schlüsselpaar wird direkt im Image hinterlegt und dient der passwortlosen Authentifizierung für ausgehende Verbindungen. Für den Betrieb werden nano, openssh-client, sshpass und rsync installiert. Während nano als einfacher Texteditor zur Verfügung steht, ermöglicht der openssh-client zusammen mit sshpass den Schlüsseltausch sowie passwortgestützte Erstverbindungen zum Client. Um den Container nach dem Start dauerhaft aktiv zu halten und ein sofortiges Beenden zu verhindern, wird der Befehl tail -f /dev/null als Standardkommando ausgeführt.
+
+Für reproduzierbare Tests werden beim Build statische Testdaten aus `client/data/user_home` in das Home-Verzeichnis des Nutzers kopiert. Das `setup_users.sh`-Script, das sowohl die Systemnutzer anlegt als auch die ACLs vorbereitet, befindet sich in `client/scripts/`. Die Host-Volumes in `docker-compose.yml` bleiben standardmäßig auskommentiert, damit der PoC komplett im Container läuft; bei Bedarf können sie manuell reaktiviert und über Umgebungsvariablen befüllt werden.
 
 Quellen:
 - Docker Compose Referenz: https://docs.docker.com/reference/compose-file/
@@ -146,6 +148,7 @@ Quellen:
 ### TEST DES SYSTEMS
 
 #### mauneller Test
+Der Client bringt bereits eine kleine Testdatensammlung unter `/home/user/testdata` mit, sodass die Verschlüsselung ohne vorbereitende Host-Volumes nachvollzogen werden kann.
 1. Stack bauen und starten  
    - `docker-compose up --build -d`  
    - Sobald die Container laufen, lassen sich Logs per `docker-compose logs -f` prüfen.
@@ -165,10 +168,10 @@ Quellen:
 ### AUTOMATISIERTER TESTLAUF
 Für wiederholbare Prüfungen existiert ein End-to-End-Skript (`tests/e2e/run.sh`), das den kompletten Ablauf inklusive Verschlüsselung, Schlüsseltausch und Repository-Sync automatisiert durchführt. Der Test setzt eine funktionsfähige Docker-Umgebung voraus und konfiguriert seine Arbeitsverzeichnisse vollständig innerhalb des Projektordners.
 
-1. Aufruf des Skripts: `tests/e2e/run.sh`. Das Skript baut die Images neu und startet die benötigten Container.
-2. Im Client werden temporäre Testdaten unter `/home/user/testdata` erzeugt, ein frisches Restic-Repository unter `/data/encrypted_stage` initialisiert und ein verschlüsseltes Backup erstellt.
-3. Anschließend erfolgen `push_ssh_key.sh` und `pull_restic_repo.sh`, um den SSH-basierten Schlüsseltausch sowie den Pull des verschlüsselten Repos in den Server-Container zu validieren.
-4. Der Test prüft, dass auf dem Server ausschließlich Ciphertext landet und kein Klartext in `./server/data` vorhanden ist; Negativprüfungen auf Klartext-Strings sind Teil des Skripts.
-5. Nach erfolgreichem Durchlauf räumt das Skript Container und temporäre Artefakte (`tests/tmp`) auf.
+1. Aufruf des Skripts: `tests/e2e/run.sh`. Vorab prüft der Lauf, ob `docker compose` oder `docker-compose` verfügbar ist.
+2. Bestehende Container des Compose-Projekts (`poc_backup_e2e`) werden gestoppt und entfernt; der Ordner `tests/tmp` wird mit `sudo rm -rf` bereinigt, um alte Artefakte zu löschen. Anschließend werden die Images neu gebaut und der Stack im Hintergrund gestartet.
+3. Auf dem Client wartet das Skript auf den SSH-Dienst, setzt die ACLs erneut (da diese durch Volumes in der Laufzeit überschrieben geworden sein könnten), initialisiert das Restic-Repository und sichert die vorbereiteten Testdaten aus `/home/user/testdata` verschlüsselt nach `/data/encrypted_stage`.
+4. Danach laufen `push_ssh_key.sh` und `pull_restic_repo.sh`. Der Test validiert, dass die Sync-Ziele existieren und dass im übertragenen Repository keine Klartextmarker (`E2E_SECRET_TEST_PAYLOAD`) verbleiben.
+5. Nach erfolgreichem Durchlauf bleiben die Container zur weiteren Analyse aktiv. Eine manuelle Bereinigung erfolgt bei Bedarf via `docker-compose -p poc_backup_e2e down -v`.
 
-Relevante Parameter können über Umgebungsvariablen gesteuert werden (z. B. `CLIENT_USER_HOME_VOLUME`, `CLIENT_ENCRYPTED_VOLUME`, `SERVER_REPO_VOLUME`, `RESTIC_PASSWORD_VALUE`). Dadurch lassen sich alternative Speicherpfade oder Passwörter für differenzierte Testläufe definieren.
+Wichtige Parameter können weiterhin über Umgebungsvariablen gesetzt werden (`RESTIC_PASSWORD_VALUE`, `PROJECT_NAME`, `PULL_USER_PASSWORD`; vorbereitete Overrides für `LOCAL_UID` und `LOCAL_GID`). Für alternative Host-Pfade lassen sich die auskommentierten Volumes in `docker-compose.yml` aktivieren. Durch das Aufräumen per `sudo` kann beim Start des Skripts eine lokale Passworteingabe erforderlich sein.

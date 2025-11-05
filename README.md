@@ -44,8 +44,8 @@ Es gibt einen automatisierten Testlauf, der den kompletten Ablauf (Schlüsseltau
 
 1. Docker muss verfügbar sein (`docker compose` oder `docker-compose`).
 2. Script aufrufen: `tests/e2e/run.sh`
-3. Der Lauf erstellt temporäre Verzeichnisse unter `tests/tmp`, füllt `/home/user/testdata` mit Prüfinhalten, initialisiert per Restic ein Repository unter `/data/encrypted_stage`, sichert die Testdaten verschlüsselt, führt anschließend `push_ssh_key.sh` sowie `pull_restic_repo.sh` aus und überprüft, dass die verschlüsselten Artefakte auf dem Server landen (inkl. Negativ-Check auf Klartext).
+3. Das Skript stoppt vorhandene Container des Projekts (`poc_backup_e2e`), räumt `tests/tmp` auf und baut die Images frisch, bevor der Stack im Hintergrund startet.
+4. Nach dem Start setzt das Skript die benötigten ACLs zur Laufzeit, initialisiert ein Restic-Repository und sichert die vorkonfigurierten Testdaten unter `/home/user/testdata` (aus `client/data/user_home`) verschlüsselt nach `/data/encrypted_stage`.
+5. Anschließend werden `push_ssh_key.sh` sowie `pull_restic_repo.sh` ausgeführt; der Lauf validiert, dass das Repository auf dem Server ankommt und keine Klartextmarker (`E2E_SECRET_TEST_PAYLOAD`) enthalten sind. Die Container bleiben danach bewusst aktiv, um eine manuelle Analyse zu ermöglichen; zur Bereinigung kann `docker compose -p poc_backup_e2e down -v` verwendet werden.
 
-Nach Abschluss werden Container und temporäre Daten automatisch entfernt.
-
-Die SSH-Schlüssel werden bei jedem Durchlauf neu erzeugt und nicht mehr über Host-Volumes persistiert. Wenn andere Pfade für Daten oder Repo verwendet werden sollen, lassen sie sich via Umgebungsvariablen (`CLIENT_USER_HOME_VOLUME`, `CLIENT_ENCRYPTED_VOLUME`, `SERVER_REPO_VOLUME`) überschreiben. Das für den Test verwendete Restic-Passwort kann über `RESTIC_PASSWORD_VALUE` gesetzt werden.
+Da die Bereinigung (`sudo rm -rf tests/tmp`) mit erhöhten Rechten arbeitet, kann zu Beginn des Laufs eine lokale Passworteingabe für `sudo` erforderlich sein. Das für den Test verwendete Restic-Passwort lässt sich über `RESTIC_PASSWORD_VALUE`, der Compose-Projektname über `PROJECT_NAME` steuern. Weitere Variablen wie `PULL_USER_PASSWORD` sowie vorbereitete UID/GID-Overrides (`LOCAL_UID`, `LOCAL_GID`) können bei Bedarf vor dem Aufruf gesetzt werden.
