@@ -15,7 +15,7 @@ SSH_BASE_OPTS="-p ${CLIENT_PORT} -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no 
 echo "=> Synchronisiere Restic-Repository von ${PULL_USER}@${CLIENT_HOST}:${REMOTE_REPO_PATH} nach ${LOCAL_REPO_PATH} ..."
 mkdir -p "${LOCAL_REPO_PATH}"
 
-rsync -az --delete -e "ssh ${SSH_BASE_OPTS}" \
+rsync -az --ignore-existing -e "ssh ${SSH_BASE_OPTS}" \
     "${PULL_USER}@${CLIENT_HOST}:${REMOTE_REPO_PATH}/" \
     "${LOCAL_REPO_PATH}/"
 
