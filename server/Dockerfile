@@ -1,11 +1,25 @@
 # /home/user/backup-poc/server/Dockerfile
-FROM alpine:latest
+FROM ubuntu:22.04
 
 # tools installieren
-RUN apk add --no-cache nano openssh-client sshpass rsync
+RUN apt-get update && apt-get install -y nano openssh-client sshpass rsync
+
+# User-Parameter
+ARG USERNAME=pull_user
+ARG USER_PASSWORD=puller-temp-password
+
+# Nutzer erstellen
+RUN useradd -m -s /bin/bash ${USERNAME} \
+    && echo "${USERNAME}:${USER_PASSWORD}" | chpasswd
+# RUN usermod -aG sudo ${USERNAME}
+
+RUN mkdir -p /data/restic_repo && chown ${USERNAME}:${USERNAME} /data/restic_repo
+
+# USER ${USERNAME}
+# WORKDIR /home/${USERNAME}
 
 # SSH-Schlüsselpaar für den root-User im Container generieren
-RUN ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -N ""
+# RUN ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
 
 # Script für den automatisierten Schlüsseltausch
 COPY scripts/push_ssh_key.sh /usr/local/bin/push_ssh_key.sh

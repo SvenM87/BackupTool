@@ -6,9 +6,9 @@ CLIENT_HOST=${CLIENT_HOST:-client}
 CLIENT_PORT=${CLIENT_PORT:-22}
 PULL_USER=${PULL_USER:-backup_puller}
 PULL_USER_PASSWORD=${PULL_USER_PASSWORD:-"puller-temp-password"}
-SSH_KEY_PATH=${SSH_KEY_PATH:-/root/.ssh/id_rsa}
-PUB_KEY_PATH=${PUB_KEY_PATH:-/root/.ssh/id_rsa.pub}
-KNOWN_HOSTS=${KNOWN_HOSTS:-/root/.ssh/known_hosts}
+SSH_KEY_PATH=${SSH_KEY_PATH:-~/.ssh/id_rsa}
+PUB_KEY_PATH=${PUB_KEY_PATH:-~/.ssh/id_rsa.pub}
+KNOWN_HOSTS=${KNOWN_HOSTS:-~/.ssh/known_hosts}
 
 if [ ! -s "${PUB_KEY_PATH}" ]; then
     echo "=> Generiere neues SSH-Schlüsselpaar unter ${SSH_KEY_PATH} ..."

@@ -2,6 +2,7 @@
 
 set -euo pipefail
 
+PULL_USER="pull_user"
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 COMPOSE_FILE="${ROOT_DIR}/docker-compose.yml"
 TMP_DIR="${ROOT_DIR}/tests/tmp"
@@ -79,13 +80,13 @@ ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_e
 
 echo "=> Korrigiere ACL-Maske für rsync..."
 # restric setzt überschreibt die ACL-Maske, daher hier korrigieren
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T --user root client setfacl -R -m u:backup_puller:rX /data/encrypted_stage
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_encoder client setfacl -R -m u:backup_puller:rX /data/encrypted_stage
 
 echo "=> Führe Schlüsseltausch durch..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server /usr/local/bin/push_ssh_key.sh
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u "${PULL_USER}" server /usr/local/bin/push_ssh_key.sh
 
 echo "=> Synchronisiere Restic-Repository..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server /usr/local/bin/pull_restic_repo.sh
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u "${PULL_USER}" server /usr/local/bin/pull_restic_repo.sh
 
 echo "=> Prüfe synchronisierte Dateien..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server test -f /data/restic_repo/config
