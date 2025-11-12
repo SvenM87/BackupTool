@@ -1,3 +1,5 @@
 tests/tmp/*
+tests/Testdaten/*
 client/data/user_home/testdata/10GBfile.txt
 client/data/user_home/testdata/Kodi/
+
