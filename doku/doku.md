@@ -147,6 +147,9 @@ Quellen:
 
 ### TEST DES SYSTEMS
 
+#### Testdaten
+Es wurde eine 10GB Textdatei mit `yes "Lorem ipsum blablabla..." | head -n 430000000 > 10GBfile.txt` erzeugt, sowie die Kodi-Repository von `https://mirror.accum.se/mirror/` mittels `wget -r -np -nH --cut-dirs=3 https://mirror.accum.se/mirror/xbmc.org/` (ToDo: Anzahl und Größe notieren) geladen. Diese wurden über .gitignore nicht in die Repo aufgrund der Kapazität aufgenommen.
+
 #### mauneller Test
 Der Client bringt bereits eine kleine Testdatensammlung unter `/home/user/testdata` mit, sodass die Verschlüsselung ohne vorbereitende Host-Volumes nachvollzogen werden kann.
 1. Stack bauen und starten  
@@ -165,7 +168,7 @@ Der Client bringt bereits eine kleine Testdatensammlung unter `/home/user/testda
    - `docker exec -it -u backup_puller backup_client bash`, `cat ~/.ssh/authorized_keys` zur Kontrolle und optional `sudo passwd -S backup_puller`, um den gesperrten Login zu verifizieren.  
    - Vom Server aus den Zugriff prüfen, z. B. mit `docker exec -it -u pull_user backup_server bash -c "ssh backup_puller@client 'ls /data/encrypted_stage'"` oder direkt `/usr/local/bin/pull_restic_repo.sh` starten.
 
-### AUTOMATISIERTER TESTLAUF
+#### AUTOMATISIERTER TESTLAUF
 Für wiederholbare Prüfungen existiert ein End-to-End-Skript (`tests/e2e/run.sh`), das den kompletten Ablauf inklusive Verschlüsselung, Schlüsseltausch und Repository-Sync automatisiert durchführt. Der Test setzt eine funktionsfähige Docker-Umgebung voraus und konfiguriert seine Arbeitsverzeichnisse vollständig innerhalb des Projektordners.
 
 1. Aufruf des Skripts: `tests/e2e/run.sh`. Vorab prüft der Lauf, ob `docker compose` oder `docker-compose` verfügbar ist.
