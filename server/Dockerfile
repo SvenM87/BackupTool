@@ -2,7 +2,7 @@
 FROM ubuntu:22.04
 
 # tools installieren
-RUN apt-get update && apt-get install -y nano openssh-client sshpass rsync
+RUN apt-get update && apt-get install -y nano
 
 # User-Parameter
 ARG USERNAME=pull_user

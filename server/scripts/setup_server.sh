@@ -10,6 +10,11 @@ SSH_KEY_PATH=${SSH_KEY_PATH:-~/.ssh/id_rsa}
 PUB_KEY_PATH=${PUB_KEY_PATH:-~/.ssh/id_rsa.pub}
 KNOWN_HOSTS=${KNOWN_HOSTS:-~/.ssh/known_hosts}
 
+# Benötigte Pakete installieren
+echo -e "\n=> Installiere benötigte Pakete..."
+sudo apt-get update
+sudo apt-get install -y openssh-client sshpass rsync
+
 if [ ! -s "${PUB_KEY_PATH}" ]; then
     echo "=> Generiere neues SSH-Schlüsselpaar unter ${SSH_KEY_PATH} ..."
     mkdir -p "$(dirname "${SSH_KEY_PATH}")"
