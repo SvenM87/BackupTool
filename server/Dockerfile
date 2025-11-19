@@ -22,8 +22,8 @@ RUN mkdir -p /data/restic_repo && chown ${USERNAME}:${USERNAME} /data/restic_rep
 # RUN ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
 
 # Script für den automatisierten Schlüsseltausch
-COPY scripts/push_ssh_key.sh /usr/local/bin/push_ssh_key.sh
-RUN chmod +x /usr/local/bin/push_ssh_key.sh
+COPY scripts/setup_server.sh /usr/local/bin/setup_server.sh
+RUN chmod +x /usr/local/bin/setup_server.sh
 
 # Script zum Synchronisieren des Restic-Repos
 COPY scripts/pull_restic_repo.sh /usr/local/bin/pull_restic_repo.sh

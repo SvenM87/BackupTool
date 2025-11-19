@@ -83,7 +83,7 @@ echo "=> Korrigiere ACL-Maske für rsync..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_encoder client setfacl -R -m u:backup_puller:rX /data/encrypted_stage
 
 echo "=> Führe Schlüsseltausch durch..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u "${PULL_USER}" server /usr/local/bin/push_ssh_key.sh
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u "${PULL_USER}" server /usr/local/bin/setup_server.sh
 
 echo "=> Synchronisiere Restic-Repository..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u "${PULL_USER}" server /usr/local/bin/pull_restic_repo.sh
