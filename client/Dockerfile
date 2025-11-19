@@ -24,9 +24,9 @@ RUN useradd -m -s /bin/bash ${USERNAME} \
 
 # Setup-Skript kopieren und ausführen
 COPY data/user_home/ /home/${USERNAME}/
-COPY scripts/setup_users.sh /home/${USERNAME}/setup_users.sh
+COPY scripts/setup_clientsh /home/${USERNAME}/setup_clientsh
 RUN chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/ && \
-    chmod +x /home/${USERNAME}/setup_users.sh
+    chmod +x /home/${USERNAME}/setup_clientsh
 
 ENV PULL_USER_PASSWORD=${PULL_USER_PASSWORD}
 
@@ -34,7 +34,7 @@ ENV PULL_USER_PASSWORD=${PULL_USER_PASSWORD}
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 # 'echo ... |' dient dazu, das Sudo-Passwort zu übergeben
-RUN echo "${USER_PASSWORD}" | sudo -SE /home/${USERNAME}/setup_users.sh
+RUN echo "${USER_PASSWORD}" | sudo -SE /home/${USERNAME}/setup_clientsh
 
 # Zurück zu root, Service starten
 USER root

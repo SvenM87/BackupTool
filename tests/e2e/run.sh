@@ -66,7 +66,7 @@ ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash
 
 echo "=> Setze ACL-Berechtigungen (ACLs) zur Laufzeit..."
 # 'backup_encoder' erlauben, /home/user zu betreten UND /home/user/testdata zu lesen. 
-# redundant, da in setup_users.sh schon gesetzt, aber muss zur Laufzeit ausgeführt werden,
+# redundant, da in setup_clientsh schon gesetzt, aber muss zur Laufzeit ausgeführt werden,
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T --user root client bash -c " \
     setfacl -R -m u:backup_encoder:rX /home/user && \
     setfacl -R -m d:u:backup_encoder:rX /home/user && \
