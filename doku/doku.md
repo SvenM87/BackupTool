@@ -164,7 +164,7 @@ Der Client bringt bereits eine kleine Testdatensammlung unter `/home/user/testda
    - Lesen funktioniert (`cat /home/user/test.txt`), Schreiben wird verweigert (`nano /home/user/test.txt` → *Permission denied*).  
    - Kopieren in das verschlüsselte Staging: `cp /home/user/* /data/encrypted_stage/` und anschließend `ls /data/encrypted_stage/`.
 4. SSH-Schlüsseltausch und Pull testen  
-   - `docker exec -it -u pull_user backup_server bash` und `/usr/local/bin/push_ssh_key.sh` ausführen. Das Skript legt bei Bedarf ein Schlüsselpaar unter `~/.ssh` des Service-Accounts an, überträgt den Public Key via `sshpass` und sperrt anschließend den Passwort-Login von `backup_puller`.  
+   - `docker exec -it -u pull_user backup_server bash` und `/usr/local/bin/setup_server.sh` ausführen. Das Skript legt bei Bedarf ein Schlüsselpaar unter `~/.ssh` des Service-Accounts an, überträgt den Public Key via `sshpass` und sperrt anschließend den Passwort-Login von `backup_puller`.  
    - `docker exec -it -u backup_puller backup_client bash`, `cat ~/.ssh/authorized_keys` zur Kontrolle und optional `sudo passwd -S backup_puller`, um den gesperrten Login zu verifizieren.  
    - Vom Server aus den Zugriff prüfen, z. B. mit `docker exec -it -u pull_user backup_server bash -c "ssh backup_puller@client 'ls /data/encrypted_stage'"` oder direkt `/usr/local/bin/pull_restic_repo.sh` starten.
 
@@ -174,7 +174,7 @@ Für wiederholbare Prüfungen existiert ein End-to-End-Skript (`tests/e2e/run.sh
 1. Aufruf des Skripts: `tests/e2e/run.sh`. Vorab prüft der Lauf, ob `docker compose` oder `docker-compose` verfügbar ist.
 2. Bestehende Container des Compose-Projekts (`poc_backup_e2e`) werden gestoppt und entfernt; der Ordner `tests/tmp` wird mit `sudo rm -rf` bereinigt, um alte Artefakte zu löschen. Anschließend werden die Images neu gebaut und der Stack im Hintergrund gestartet.
 3. Auf dem Client wartet das Skript auf den SSH-Dienst, setzt die ACLs erneut (da diese durch Volumes in der Laufzeit überschrieben geworden sein könnten), initialisiert das Restic-Repository und sichert die vorbereiteten Testdaten aus `/home/user/testdata` verschlüsselt nach `/data/encrypted_stage`.
-4. Danach laufen `push_ssh_key.sh` und `pull_restic_repo.sh`. Beide Skripte werden im Server-Container als `pull_user` aufgerufen, sodass Schlüsselmaterial und `known_hosts` im richtigen Home landen. Der Test validiert, dass die Sync-Ziele existieren und dass im übertragenen Repository keine Klartextmarker (`E2E_SECRET_TEST_PAYLOAD`) verbleiben.
+4. Danach laufen `setup_server.sh` und `pull_restic_repo.sh`. Beide Skripte werden im Server-Container als `pull_user` aufgerufen, sodass Schlüsselmaterial und `known_hosts` im richtigen Home landen. Der Test validiert, dass die Sync-Ziele existieren und dass im übertragenen Repository keine Klartextmarker (`E2E_SECRET_TEST_PAYLOAD`) verbleiben.
 5. Nach erfolgreichem Durchlauf bleiben die Container zur weiteren Analyse aktiv. Eine manuelle Bereinigung erfolgt bei Bedarf via `docker-compose -p poc_backup_e2e down -v`.
 
 Wichtige Parameter können weiterhin über Umgebungsvariablen gesetzt werden (`RESTIC_PASSWORD_VALUE`, `PROJECT_NAME`, `PULL_USER_PASSWORD`; vorbereitete Overrides für `LOCAL_UID` und `LOCAL_GID`). Für alternative Host-Pfade lassen sich die auskommentierten Volumes in `docker-compose.yml` aktivieren. Durch das Aufräumen per `sudo` kann beim Start des Skripts eine lokale Passworteingabe erforderlich sein.
