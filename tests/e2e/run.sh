@@ -58,9 +58,10 @@ cleanup
 
 printf "${FORMAT}" "Baue und starte Test-Stack..."
 # ohne Cache bauen
-# ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" build --no-cache
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" build --no-cache
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d
 # standard mit Cache bauen und starten
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d --build
+# ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d --build
 
 
 printf "${FORMAT}" "Führe Client-Setup durch..."
@@ -73,12 +74,16 @@ export PULL_USER_PASSWORD="${PULL_USER_PASSWORD_EXTRACTED}" # Überschreibe die 
 
 echo "${CLIENT_SETUP_OUTPUT}" # Zeige die restliche Setup-Ausgabe an den Benutzer
 
-
 printf "${FORMAT}" "Starte SSHD..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -d client /usr/sbin/sshd -D
 
 printf "${FORMAT}" "Prüfe, ob der Client-SSHD läuft..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash -c "until pgrep -f 'sshd' >/dev/null; do sleep 1; done"
+
+
+printf "${FORMAT}" "Führe Server-Setup durch..."
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u root -e "PULL_USER_PASSWORD=${PULL_USER_PASSWORD}" server /usr/local/bin/setup_server.sh
+
 
 printf "${FORMAT}" "Setze ACL-Berechtigungen (ACLs) zur Laufzeit..."
 # 'backup_encoder' erlauben, /home/user zu betreten UND /home/user/testdata zu lesen. 
@@ -97,9 +102,6 @@ ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_e
 printf "${FORMAT}" "Korrigiere ACL-Maske für rsync..."
 # restric setzt überschreibt die ACL-Maske, daher hier korrigieren
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_encoder client setfacl -R -m u:backup_puller:rX /data/encrypted_stage
-
-printf "${FORMAT}" "Führe Server-Setup durch..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u root -e "PULL_USER_PASSWORD=${PULL_USER_PASSWORD}" server /usr/local/bin/setup_server.sh
 
 printf "${FORMAT}" "Synchronisiere Restic-Repository..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u "${PULL_USER}" server /usr/local/bin/pull_restic_repo.sh

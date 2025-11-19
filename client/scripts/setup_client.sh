@@ -27,7 +27,7 @@ ENCRYPTED_DIR="/data/encrypted_stage"
 # Benötigte Pakete installieren
 printf "${FORMAT}" "Installiere benötigte Pakete..."
 sudo apt-get update > /dev/null
-sudo apt-get install -y acl openssh-server rsync restic
+sudo apt-get install -y acl openssh-server rsync restic > /dev/null
 
 # Backup-spezifische Nutzer anlegen (benötigt sudo)
 printf "${FORMAT}" "Lege Backup-System-Nutzer an..."

@@ -2,7 +2,7 @@
 FROM ubuntu:22.04
 
 # tools installieren
-RUN apt-get update && apt-get install -y nano
+RUN apt-get update && apt-get install -y nano sudo
 
 
 # Script für den automatisierten Schlüsseltausch

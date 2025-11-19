@@ -7,9 +7,10 @@ CLIENT_HOST=${CLIENT_HOST:-client}
 CLIENT_PORT=${CLIENT_PORT:-22}
 PULL_USER=${PULL_USER:-backup_puller}
 PULL_USER_PASSWORD=${PULL_USER_PASSWORD:-"puller-temp-password"}
-SSH_KEY_PATH=${SSH_KEY_PATH:-~/.ssh/id_rsa}
-PUB_KEY_PATH=${PUB_KEY_PATH:-~/.ssh/id_rsa.pub}
-KNOWN_HOSTS=${KNOWN_HOSTS:-~/.ssh/known_hosts}
+SSH_DIR="/home/${PULL_USER}/.ssh"
+SSH_KEY_PATH="/home/${PULL_USER}/.ssh/id_ed25519"
+PUB_KEY_PATH="/home/${PULL_USER}/.ssh/id_ed25519.pub"
+KNOWN_HOSTS="/home/${PULL_USER}/.ssh/known_hosts"
 LOCAL_REPO_PATH=${LOCAL_REPO_PATH:-/data/restic_repo}
 FORMAT="\n\e[1;94m=> %s\e[0m\n"
 
@@ -24,19 +25,20 @@ if ! id -u ${PULL_USER} > /dev/null 2>&1; then
     useradd --system --create-home --shell /bin/false ${PULL_USER}
 fi
 
-SH_KEY_PATH="/home/${PULL_USER}/.ssh/id_rsa"
-PUB_KEY_PATH="/home/${PULL_USER}/.ssh/id_rsa.pub"
-KNOWN_HOSTS="/home/${PULL_USER}/.ssh/known_hosts"
-
 printf "${FORMAT}" "Lege Verzeichnisse an und setze Berechtigungen..."
-mkdir -p "${LOCAL_REPO_PATH}"
+mkdir -p "${LOCAL_REPO_PATH}" "${SSH_DIR}"
 chown "${PULL_USER}":"${PULL_USER}" "${LOCAL_REPO_PATH}"
 chmod 750 "${LOCAL_REPO_PATH}"
+chmod 700 "${SSH_DIR}"
 
+# Host-Schlüssel generieren
 if [ ! -s "${PUB_KEY_PATH}" ]; then
-    printf "${FORMAT}" "Generiere neues SSH-Schlüsselpaar unter ${SSH_KEY_PATH} ..."
-    mkdir -p "$(dirname "${SSH_KEY_PATH}")"
-    sudo -u "${PULL_USER}" ssh-keygen -t ed25519 -N "" -f "${SSH_KEY_PATH}"
+    printf "${FORMAT}" "Generiere neues SSH-Schlüsselpaar unter ${SSH_KEY_PATH} (als ${PULL_USER})..."
+    
+    # Der gesamte Block muss als PULL_USER ausgeführt werden
+    ssh-keygen -t ed25519 -N "" -f "${SSH_KEY_PATH}"
+    # chown -R "${PULL_USER}":"${PULL_USER}" "${SSH_DIR}"
+    chown -R "${PULL_USER}":root "${SSH_DIR}"
 fi
 
 if [ ! -s "${PUB_KEY_PATH}" ]; then
