@@ -15,6 +15,11 @@ PULL_USER_PASSWORD=${PULL_USER_PASSWORD:-"puller-temp-password"}
 SOURCE_DIR="/home/${DATA_OWNER}"
 ENCRYPTED_DIR="/data/encrypted_stage"
 
+# Benötigte Pakete installieren
+echo -e "\n=> Installiere benötigte Pakete..."
+sudo apt-get update
+sudo apt-get install -y acl openssh-server rsync restic
+
 # Backup-spezifische Nutzer anlegen (benötigt sudo)
 echo "=> Lege Backup-System-Nutzer an..."
 

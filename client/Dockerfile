@@ -5,12 +5,8 @@ FROM ubuntu:22.04
 
 # Basissystem einrichten
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssh-server \
     sudo \
-    nano \
-    acl \
-    rsync \
-	restic
+    nano
 
 # User-Parameter
 ARG USERNAME=user
