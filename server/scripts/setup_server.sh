@@ -9,34 +9,38 @@ PULL_USER_PASSWORD=${PULL_USER_PASSWORD:-"puller-temp-password"}
 SSH_KEY_PATH=${SSH_KEY_PATH:-~/.ssh/id_rsa}
 PUB_KEY_PATH=${PUB_KEY_PATH:-~/.ssh/id_rsa.pub}
 KNOWN_HOSTS=${KNOWN_HOSTS:-~/.ssh/known_hosts}
+LOCAL_REPO_PATH=${LOCAL_REPO_PATH:-/data/restic_repo}
 
 # Benötigte Pakete installieren
 echo -e "\n=> Installiere benötigte Pakete..."
 sudo apt-get update
 sudo apt-get install -y openssh-client sshpass rsync
 
+echo -e "\n=> Lege Verzeichnisse an und setze Berechtigungen..."
+mkdir -p "${LOCAL_REPO_PATH}"
+
 if [ ! -s "${PUB_KEY_PATH}" ]; then
-    echo "=> Generiere neues SSH-Schlüsselpaar unter ${SSH_KEY_PATH} ..."
+    echo -e "\n=> Generiere neues SSH-Schlüsselpaar unter ${SSH_KEY_PATH} ..."
     mkdir -p "$(dirname "${SSH_KEY_PATH}")"
     ssh-keygen -t rsa -b 4096 -N "" -f "${SSH_KEY_PATH}"
 fi
 
 if [ ! -s "${PUB_KEY_PATH}" ]; then
-    echo "Fehler: Öffentlicher Schlüssel (${PUB_KEY_PATH}) konnte nicht erstellt werden." >&2
+    echo -e "\n=> Fehler: Öffentlicher Schlüssel (${PUB_KEY_PATH}) konnte nicht erstellt werden." >&2
     exit 1
 fi
 
 PUB_KEY=$(cat "${PUB_KEY_PATH}")
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=${KNOWN_HOSTS} -o PreferredAuthentications=publickey,password"
 
-echo "=> Übertrage öffentlichen Schlüssel zu ${PULL_USER}@${CLIENT_HOST}..."
+echo -e "\n=> Übertrage öffentlichen Schlüssel zu ${PULL_USER}@${CLIENT_HOST}..."
 sshpass -p "${PULL_USER_PASSWORD}" ssh ${SSH_OPTS} -i "${SSH_KEY_PATH}" -p "${CLIENT_PORT}" "${PULL_USER}@${CLIENT_HOST}" "mkdir -p ~/.ssh && chmod 700 ~/.ssh && touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 sshpass -p "${PULL_USER_PASSWORD}" ssh ${SSH_OPTS} -i "${SSH_KEY_PATH}" -p "${CLIENT_PORT}" "${PULL_USER}@${CLIENT_HOST}" "grep -qxF '${PUB_KEY}' ~/.ssh/authorized_keys || echo '${PUB_KEY}' >> ~/.ssh/authorized_keys"
 
-echo "=> Teste SSH-Anmeldung via Schlüssel..."
+echo -e "\n=> Teste SSH-Anmeldung via Schlüssel..."
 ssh ${SSH_OPTS} -i "${SSH_KEY_PATH}" -p "${CLIENT_PORT}" "${PULL_USER}@${CLIENT_HOST}" "echo 'Schlüsselanmeldung erfolgreich.'"
 
-echo "=> Passwort-Login für ${PULL_USER} deaktivieren..."
+echo -e "\n=> Passwort-Login für ${PULL_USER} deaktivieren..."
 ssh ${SSH_OPTS} -i "${SSH_KEY_PATH}" -p "${CLIENT_PORT}" "${PULL_USER}@${CLIENT_HOST}" "sudo passwd -l ${PULL_USER}"
 
-echo "=> Passwort-Login deaktiviert. Zugriff nur noch per Schlüssel möglich."
+echo -e "\n=> Passwort-Login deaktiviert. Zugriff nur noch per Schlüssel möglich."

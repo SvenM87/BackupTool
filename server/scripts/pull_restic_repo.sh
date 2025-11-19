@@ -4,7 +4,7 @@ set -eu
 
 CLIENT_HOST=${CLIENT_HOST:-client}
 CLIENT_PORT=${CLIENT_PORT:-22}
-PULL_USER=${PULL_USER:-backup_puller}
+PULL_USER="backup_puller"
 REMOTE_REPO_PATH=${REMOTE_REPO_PATH:-/data/encrypted_stage}
 LOCAL_REPO_PATH=${LOCAL_REPO_PATH:-/data/restic_repo}
 SSH_KEY_PATH=${SSH_KEY_PATH:-~/.ssh/id_rsa}
