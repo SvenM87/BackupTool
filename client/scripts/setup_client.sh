@@ -91,4 +91,13 @@ else
 fi
 
 printf "${FORMAT}" "Richte SSH ein..."
-printf "${FORMAT}" "Setup durch ${DATA_OWNER} erfolgreich abgeschlossen.\n Bitte notiere das temporäre Passwort für den Pull-Nutzer '${PULL_USER}': ${PULL_USER_PASSWORD}\n"
+sudo mkdir -p /var/run/sshd
+# sudo ssh-keygen -t ed25519
+# Dienst starten
+# -------------------------- ACHTUNG: für e2e Test auskommentiert --------------------------
+# Im finalen Script sollte der SSH-Dienst im Setup-Skript gestartet werden!
+# /usr/sbin/sshd -D
+
+printf "${FORMAT}" "Setup durch ${DATA_OWNER} erfolgreich abgeschlossen. Bitte notiere das temporäre Passwort für den Pull-Nutzer '${PULL_USER}': ${PULL_USER_PASSWORD}"# 
+# Marker zum Lesen des Passworts in den E2E-Tests
+printf "<:%s:>" "${PULL_USER_PASSWORD}"

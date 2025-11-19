@@ -18,13 +18,25 @@ printf "${FORMAT}" "Installiere benötigte Pakete..."
 apt-get update > /dev/null
 apt-get install -y openssh-client sshpass rsync > /dev/null
 
+if ! id -u ${PULL_USER} > /dev/null 2>&1; then
+    printf "${FORMAT}" "Erstelle PULL_USER '${PULL_USER}'..."
+    # Erstellen als Systemnutzer (Server braucht keine interaktive Shell)
+    useradd --system --create-home --shell /bin/false ${PULL_USER}
+fi
+
+SH_KEY_PATH="/home/${PULL_USER}/.ssh/id_rsa"
+PUB_KEY_PATH="/home/${PULL_USER}/.ssh/id_rsa.pub"
+KNOWN_HOSTS="/home/${PULL_USER}/.ssh/known_hosts"
+
 printf "${FORMAT}" "Lege Verzeichnisse an und setze Berechtigungen..."
 mkdir -p "${LOCAL_REPO_PATH}"
+chown "${PULL_USER}":"${PULL_USER}" "${LOCAL_REPO_PATH}"
+chmod 750 "${LOCAL_REPO_PATH}"
 
 if [ ! -s "${PUB_KEY_PATH}" ]; then
     printf "${FORMAT}" "Generiere neues SSH-Schlüsselpaar unter ${SSH_KEY_PATH} ..."
     mkdir -p "$(dirname "${SSH_KEY_PATH}")"
-    ssh-keygen -t rsa -b 4096 -N "" -f "${SSH_KEY_PATH}"
+    sudo -u "${PULL_USER}" ssh-keygen -t ed25519 -N "" -f "${SSH_KEY_PATH}"
 fi
 
 if [ ! -s "${PUB_KEY_PATH}" ]; then

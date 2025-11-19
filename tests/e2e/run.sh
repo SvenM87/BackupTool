@@ -99,7 +99,7 @@ printf "${FORMAT}" "Korrigiere ACL-Maske für rsync..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_encoder client setfacl -R -m u:backup_puller:rX /data/encrypted_stage
 
 printf "${FORMAT}" "Führe Server-Setup durch..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u root server /usr/local/bin/setup_server.sh
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u root -e "PULL_USER_PASSWORD=${PULL_USER_PASSWORD}" server /usr/local/bin/setup_server.sh
 
 printf "${FORMAT}" "Synchronisiere Restic-Repository..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u "${PULL_USER}" server /usr/local/bin/pull_restic_repo.sh
