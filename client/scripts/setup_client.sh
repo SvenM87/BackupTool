@@ -1,5 +1,5 @@
 #!/bin/bash
-# /home/user/backup-poc/client/scripts/setup_clientsh
+# /home/user/backup-poc/client/scripts/setup_client.sh
 # Dieses Skript wird von einem Sudo-Nutzer ausgeführt.
 
 set -e
