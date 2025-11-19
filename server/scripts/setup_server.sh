@@ -1,4 +1,5 @@
 #!/bin/sh
+# /home/user/backup-poc/server/scripts/setup_server.sh
 
 set -e
 
@@ -10,37 +11,38 @@ SSH_KEY_PATH=${SSH_KEY_PATH:-~/.ssh/id_rsa}
 PUB_KEY_PATH=${PUB_KEY_PATH:-~/.ssh/id_rsa.pub}
 KNOWN_HOSTS=${KNOWN_HOSTS:-~/.ssh/known_hosts}
 LOCAL_REPO_PATH=${LOCAL_REPO_PATH:-/data/restic_repo}
+FORMAT="\n\e[1;94m=> %s\e[0m\n"
 
 # Benötigte Pakete installieren
-echo -e "\n=> Installiere benötigte Pakete..."
-sudo apt-get update
-sudo apt-get install -y openssh-client sshpass rsync
+printf "${FORMAT}" "Installiere benötigte Pakete..."
+apt-get update > /dev/null
+apt-get install -y openssh-client sshpass rsync > /dev/null
 
-echo -e "\n=> Lege Verzeichnisse an und setze Berechtigungen..."
+printf "${FORMAT}" "Lege Verzeichnisse an und setze Berechtigungen..."
 mkdir -p "${LOCAL_REPO_PATH}"
 
 if [ ! -s "${PUB_KEY_PATH}" ]; then
-    echo -e "\n=> Generiere neues SSH-Schlüsselpaar unter ${SSH_KEY_PATH} ..."
+    printf "${FORMAT}" "Generiere neues SSH-Schlüsselpaar unter ${SSH_KEY_PATH} ..."
     mkdir -p "$(dirname "${SSH_KEY_PATH}")"
     ssh-keygen -t rsa -b 4096 -N "" -f "${SSH_KEY_PATH}"
 fi
 
 if [ ! -s "${PUB_KEY_PATH}" ]; then
-    echo -e "\n=> Fehler: Öffentlicher Schlüssel (${PUB_KEY_PATH}) konnte nicht erstellt werden." >&2
+    printf "${FORMAT}" "Fehler: Öffentlicher Schlüssel (${PUB_KEY_PATH}) konnte nicht erstellt werden." >&2
     exit 1
 fi
 
 PUB_KEY=$(cat "${PUB_KEY_PATH}")
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=${KNOWN_HOSTS} -o PreferredAuthentications=publickey,password"
 
-echo -e "\n=> Übertrage öffentlichen Schlüssel zu ${PULL_USER}@${CLIENT_HOST}..."
+printf "${FORMAT}" "Übertrage öffentlichen Schlüssel zu ${PULL_USER}@${CLIENT_HOST}..."
 sshpass -p "${PULL_USER_PASSWORD}" ssh ${SSH_OPTS} -i "${SSH_KEY_PATH}" -p "${CLIENT_PORT}" "${PULL_USER}@${CLIENT_HOST}" "mkdir -p ~/.ssh && chmod 700 ~/.ssh && touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 sshpass -p "${PULL_USER_PASSWORD}" ssh ${SSH_OPTS} -i "${SSH_KEY_PATH}" -p "${CLIENT_PORT}" "${PULL_USER}@${CLIENT_HOST}" "grep -qxF '${PUB_KEY}' ~/.ssh/authorized_keys || echo '${PUB_KEY}' >> ~/.ssh/authorized_keys"
 
-echo -e "\n=> Teste SSH-Anmeldung via Schlüssel..."
+printf "${FORMAT}" "Teste SSH-Anmeldung via Schlüssel..."
 ssh ${SSH_OPTS} -i "${SSH_KEY_PATH}" -p "${CLIENT_PORT}" "${PULL_USER}@${CLIENT_HOST}" "echo 'Schlüsselanmeldung erfolgreich.'"
 
-echo -e "\n=> Passwort-Login für ${PULL_USER} deaktivieren..."
+printf "${FORMAT}" "Passwort-Login für ${PULL_USER} deaktivieren..."
 ssh ${SSH_OPTS} -i "${SSH_KEY_PATH}" -p "${CLIENT_PORT}" "${PULL_USER}@${CLIENT_HOST}" "sudo passwd -l ${PULL_USER}"
 
-echo -e "\n=> Passwort-Login deaktiviert. Zugriff nur noch per Schlüssel möglich."
+printf "${FORMAT}" "Passwort-Login deaktiviert. Zugriff nur noch per Schlüssel möglich."

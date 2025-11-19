@@ -7,21 +7,30 @@ set -e
 # Definitionen
 # Der Nutzer, der 'sudo' aufgerufen hat, ist der Besitzer der Daten
 DATA_OWNER=${SUDO_USER}
+FORMAT="\n\e[1;94m=> %s\e[0m\n"
 
 ENCODER_USER="backup_encoder"
 PULL_USER="backup_puller"
-PULL_USER_PASSWORD=${PULL_USER_PASSWORD:-"puller-temp-password"}
+# Generiere ein zufälliges temporäres Passwort für den Pull-Nutzer (falls nicht über ENV gesetzt).
+# Zeichensatz: alphanumerisch und einige Sonderzeichen, Länge 12
+if [ -z "${PULL_USER_PASSWORD:-}" ]; then
+    PULL_USER_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9!@#$%&*()-_=+' < /dev/urandom | head -c 12)
+    # Fallback, falls tr nichts liefert
+    if [ -z "${PULL_USER_PASSWORD}" ]; then
+        PULL_USER_PASSWORD=$(openssl rand -base64 18 2>/dev/null || head -c 12 /dev/urandom | base64 | tr -d '\n')
+    fi
+fi
 
 SOURCE_DIR="/home/${DATA_OWNER}"
 ENCRYPTED_DIR="/data/encrypted_stage"
 
 # Benötigte Pakete installieren
-echo -e "\n=> Installiere benötigte Pakete..."
-sudo apt-get update
+printf "${FORMAT}" "Installiere benötigte Pakete..."
+sudo apt-get update > /dev/null
 sudo apt-get install -y acl openssh-server rsync restic
 
 # Backup-spezifische Nutzer anlegen (benötigt sudo)
-echo "=> Lege Backup-System-Nutzer an..."
+printf "${FORMAT}" "Lege Backup-System-Nutzer an..."
 
 if ! id -u ${ENCODER_USER} > /dev/null 2>&1; then
     sudo adduser --system --group --no-create-home --shell /bin/false ${ENCODER_USER}
@@ -35,7 +44,7 @@ fi
 echo "${PULL_USER}:${PULL_USER_PASSWORD}" | sudo chpasswd
 
 # Verzeichnisse und Berechtigungen anpassen
-echo "=> Konfiguriere Verzeichnisse und Berechtigungen..."
+printf "${FORMAT}" "Konfiguriere Verzeichnisse und Berechtigungen..."
 
 # Erstelle das Verzeichnis für verschlüsselte Daten
 sudo mkdir -p ${ENCRYPTED_DIR}
@@ -43,7 +52,7 @@ sudo chown ${ENCODER_USER}:${ENCODER_USER} ${ENCRYPTED_DIR}
 sudo chmod 750 ${ENCRYPTED_DIR}
 
 # Zugriffsrechte einrichten
-echo "=> Richte gruppenbasierte Zugriffsrechte ein..."
+printf "${FORMAT}" "Richte gruppenbasierte Zugriffsrechte ein..."
 
 # 'backup_encoder' darf Daten vom DATA_OWNER lesen
 #sudo usermod -aG ${DATA_OWNER} ${ENCODER_USER}
@@ -57,6 +66,7 @@ sudo setfacl -R -m u:${PULL_USER}:r ${ENCRYPTED_DIR}
 sudo setfacl -R -m d:u:${PULL_USER}:r ${ENCRYPTED_DIR}
 
 # SSH-Zugang für den Pull-Nutzer vorbereiten
+printf "${FORMAT}" "Richte SSH-Zugang für den Pull-Nutzer ein..."
 SSH_DIR="/home/${PULL_USER}/.ssh"
 AUTH_KEYS_FILE="${SSH_DIR}/authorized_keys"
 
@@ -80,4 +90,5 @@ else
     echo "PasswordAuthentication yes" | sudo tee -a /etc/ssh/sshd_config > /dev/null
 fi
 
-echo "Setup durch ${DATA_OWNER} erfolgreich abgeschlossen."
+printf "${FORMAT}" "Richte SSH ein..."
+printf "${FORMAT}" "Setup durch ${DATA_OWNER} erfolgreich abgeschlossen.\n Bitte notiere das temporäre Passwort für den Pull-Nutzer '${PULL_USER}': ${PULL_USER_PASSWORD}\n"

@@ -14,6 +14,7 @@ RESTIC_PASSWORD_VALUE=${RESTIC_PASSWORD_VALUE:-e2e-restic-password}
 SECRET_MARKER="E2E_SECRET_TEST_PAYLOAD"
 PROJECT_NAME=${PROJECT_NAME:-poc_backup_e2e}
 export PULL_USER_PASSWORD=${PULL_USER_PASSWORD:-e2e-test-password}
+FORMAT="\n\e[1;94m-> %s\e[0m\n"
 
 if ! command -v docker >/dev/null 2>&1; then
     echo "Docker wird benötigt, ist aber nicht verfügbar." >&2
@@ -35,14 +36,14 @@ LOCAL_GID=${LOCAL_GID:-$(id -g)}
 export LOCAL_UID LOCAL_GID
 
 cleanup() {
-    echo "=> Bereinige Test-Workspace..."
+    printf "${FORMAT}" "Bereinige Test-Workspace..."
     ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" down -v >/dev/null 2>&1 || true
     sudo rm -rf "${TMP_DIR}"
-    echo "=> Bereinigung abgeschlossen."
+    printf "${FORMAT}" "Bereinigung abgeschlossen."
 }
 # trap cleanup EXIT
 
-echo "=> Vorbereitung des Test-Workspaces..."
+printf "${FORMAT}" "Vorbereitung des Test-Workspaces..."
 cleanup
 # mkdir -p "${CLIENT_TESTDATA}" "${ENCRYPTED_STAGE}" "${SERVER_REPO}"
 # cat > "${CLIENT_TESTDATA}/report.txt" <<EOF
@@ -55,7 +56,7 @@ cleanup
 # export CLIENT_ENCRYPTED_VOLUME="${ENCRYPTED_STAGE}"
 # export SERVER_REPO_VOLUME="${SERVER_REPO}"
 
-echo "=> Baue und starte Test-Stack..."
+printf "${FORMAT}" "Baue und starte Test-Stack..."
 # ohne Cache bauen
 # ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" build --no-cache
 # standard mit Cache bauen und starten
@@ -64,7 +65,7 @@ ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d --build
 echo "=> Prüfe, ob der Client-SSHD läuft..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash -c "until pgrep -f 'sshd' >/dev/null; do sleep 1; done"
 
-echo "=> Setze ACL-Berechtigungen (ACLs) zur Laufzeit..."
+printf "${FORMAT}" "Setze ACL-Berechtigungen (ACLs) zur Laufzeit..."
 # 'backup_encoder' erlauben, /home/user zu betreten UND /home/user/testdata zu lesen. 
 # redundant, da in setup_client.sh schon gesetzt, aber muss zur Laufzeit ausgeführt werden,
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T --user root client bash -c " \
@@ -73,24 +74,24 @@ ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T --user root
     setfacl -R -m u:backup_puller:rX /data/encrypted_stage && \
     setfacl -R -m d:u:backup_puller:rX /data/encrypted_stage"
 
-echo "=> Initialisiere Restic-Repository und erstelle Backup..."
+printf "${FORMAT}" "Initialisiere Restic-Repository und erstelle Backup..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_encoder client bash -c "export RESTIC_PASSWORD='${RESTIC_PASSWORD_VALUE}'; if [ ! -f /data/encrypted_stage/config ]; then restic -r /data/encrypted_stage init --no-cache; fi"
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_encoder client bash -c "export RESTIC_PASSWORD='${RESTIC_PASSWORD_VALUE}'; restic -r /data/encrypted_stage backup /home/user/testdata --no-cache"
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_encoder client bash -c "export RESTIC_PASSWORD='${RESTIC_PASSWORD_VALUE}'; restic -r /data/encrypted_stage snapshots --no-cache"
 
-echo "=> Korrigiere ACL-Maske für rsync..."
+printf "${FORMAT}" "Korrigiere ACL-Maske für rsync..."
 # restric setzt überschreibt die ACL-Maske, daher hier korrigieren
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u backup_encoder client setfacl -R -m u:backup_puller:rX /data/encrypted_stage
 
-echo "=> Führe Schlüsseltausch durch..."
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u "${PULL_USER}" server /usr/local/bin/setup_server.sh
+printf "${FORMAT}" "Führe Server-Setup durch..."
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u root server /usr/local/bin/setup_server.sh
 
-echo "=> Synchronisiere Restic-Repository..."
+printf "${FORMAT}" "Synchronisiere Restic-Repository..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u "${PULL_USER}" server /usr/local/bin/pull_restic_repo.sh
 
-echo "=> Prüfe synchronisierte Dateien..."
+printf "${FORMAT}" "Prüfe synchronisierte Dateien..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server test -f /data/restic_repo/config
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server sh -c "ls -A /data/restic_repo/snapshots | grep -q ."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T server sh -c "! grep -R '${SECRET_MARKER}' /data/restic_repo"
 
-echo "=> End-to-End-Test erfolgreich abgeschlossen."
+printf "${FORMAT}" "End-to-End-Test erfolgreich abgeschlossen."
