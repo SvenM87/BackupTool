@@ -11,7 +11,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # User-Parameter
 ARG USERNAME=user
 ARG USER_PASSWORD=123456
-ARG PULL_USER_PASSWORD=puller-temp-password
 
 # Nutzer erstellen
 RUN useradd -m -s /bin/bash ${USERNAME} \
@@ -26,24 +25,8 @@ RUN chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/ && \
 
 ENV PULL_USER_PASSWORD=${PULL_USER_PASSWORD}
 
-# Zum neuen Nutzer wechseln und Skript ausführen
-USER ${USERNAME}
-WORKDIR /home/${USERNAME}
-# 'echo ... |' dient dazu, das Sudo-Passwort zu übergeben
-RUN echo "${USER_PASSWORD}" | sudo -SE /home/${USERNAME}/setup_client.sh
-
-# Zurück zu root, Service starten
-USER root
-WORKDIR /
-
-# SSH Schlüssel des Servers laden
-#COPY ./ssh/authorized_keys /home/backup_puller/.ssh/authorized_keys
-#RUN chown backup_puller:backup_puller /home/backup_puller/.ssh/authorized_keys \
-# && chmod 600 /home/backup_puller/.ssh/authorized_keys
-
-# SSH-Konfiguration und Startbefehl
-RUN mkdir -p /var/run/sshd
-RUN ssh-keygen -A
 
 EXPOSE 22
-CMD ["/usr/sbin/sshd", "-D"]
+# CMD ["/usr/sbin/sshd", "-D"]
+
+CMD ["tail", "-f", "/dev/null"]

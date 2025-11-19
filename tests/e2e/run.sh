@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PULL_USER="pull_user"
+PULL_USER="backup_puller"
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 COMPOSE_FILE="${ROOT_DIR}/docker-compose.yml"
 TMP_DIR="${ROOT_DIR}/tests/tmp"
@@ -62,7 +62,22 @@ printf "${FORMAT}" "Baue und starte Test-Stack..."
 # standard mit Cache bauen und starten
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d --build
 
-echo "=> Prüfe, ob der Client-SSHD läuft..."
+
+printf "${FORMAT}" "Führe Client-Setup durch..."
+# Setup ausführen und Ausgabe erfassen
+CLIENT_SETUP_OUTPUT=$(${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u user client bash -c "echo 123456 | sudo -S ~/setup_client.sh")
+
+# Das Passwort aus der Ausgabe extrahieren (mit den Markern <: und :>)
+PULL_USER_PASSWORD_EXTRACTED=$(echo "${CLIENT_SETUP_OUTPUT}" | grep "<:" | awk -F':' '{print $2}')
+export PULL_USER_PASSWORD="${PULL_USER_PASSWORD_EXTRACTED}" # Überschreibe die globale Export-Variable
+
+echo "${CLIENT_SETUP_OUTPUT}" # Zeige die restliche Setup-Ausgabe an den Benutzer
+
+
+printf "${FORMAT}" "Starte SSHD..."
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -d client /usr/sbin/sshd -D
+
+printf "${FORMAT}" "Prüfe, ob der Client-SSHD läuft..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash -c "until pgrep -f 'sshd' >/dev/null; do sleep 1; done"
 
 printf "${FORMAT}" "Setze ACL-Berechtigungen (ACLs) zur Laufzeit..."
