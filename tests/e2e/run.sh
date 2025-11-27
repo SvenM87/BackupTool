@@ -58,10 +58,10 @@ cleanup
 
 printf "${FORMAT}" "Baue und starte Test-Stack..."
 # ohne Cache bauen
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" build --no-cache
-${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d
+# ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" build --no-cache
+# ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d
 # standard mit Cache bauen und starten
-# ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d --build
+${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" up -d --build
 
 
 printf "${FORMAT}" "Führe Client-Setup durch..."
@@ -83,6 +83,15 @@ ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash
 
 printf "${FORMAT}" "Führe Server-Setup durch..."
 ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u root -e "PULL_USER_PASSWORD=${PULL_USER_PASSWORD}" server /usr/local/bin/setup_server.sh
+
+# printf "${FORMAT}" "Prüfe authorized_keys-Restriktion (rsync-only)..."
+# ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T client bash -c "grep -F 'rsync --server --sender' /home/${PULL_USER}/.ssh/authorized_keys | grep -F 'restrict,no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty'"
+
+printf "${FORMAT}" "Verifiziere, dass andere Kommandos scheitern..."
+if ${COMPOSE_COMMAND} -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" exec -T -u "${PULL_USER}" server sh -c "timeout 5 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -i ~/.ssh/id_ed25519 -p 22 ${PULL_USER}@client 'echo should-fail'"; then
+    echo "Unerwarteter Erfolg: SSH-Command ohne rsync wurde akzeptiert." >&2
+    exit 1
+fi
 
 
 printf "${FORMAT}" "Setze ACL-Berechtigungen (ACLs) zur Laufzeit..."

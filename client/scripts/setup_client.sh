@@ -62,8 +62,8 @@ sudo setfacl -R -m d:u:${ENCODER_USER}:rx ${SOURCE_DIR}
 
 # 'backup_puller' darf verschlüsselte Daten vom ENCODER_USER lesen
 #sudo usermod -aG ${ENCODER_USER} ${PULL_USER}
-sudo setfacl -R -m u:${PULL_USER}:r ${ENCRYPTED_DIR}
-sudo setfacl -R -m d:u:${PULL_USER}:r ${ENCRYPTED_DIR}
+sudo setfacl -R -m u:${PULL_USER}:rX ${ENCRYPTED_DIR}
+sudo setfacl -R -m d:u:${PULL_USER}:rX ${ENCRYPTED_DIR}
 
 # SSH-Zugang für den Pull-Nutzer vorbereiten
 printf "${FORMAT}" "Richte SSH-Zugang für den Pull-Nutzer ein..."

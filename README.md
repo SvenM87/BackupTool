@@ -5,7 +5,8 @@
 1. Optional das temporäre Passwort definieren: `export PULL_USER_PASSWORD="mein-sicheres-passwort"`.
 2. Container bauen und starten: `docker compose up -d`.
 3. Einmalig den Schlüsseltausch als dediziertem Service-Account auslösen: `docker compose exec -u pull_user server /usr/local/bin/setup_server.sh`.
-4. Nach erfolgreichem Durchlauf ist `backup_puller` nur noch per SSH-Schlüssel erreichbar; der Passwort-Login wurde gesperrt und die Schlüssel liegen unter `/home/pull_user/.ssh`.
+4. Nach erfolgreichem Durchlauf ist `backup_puller` faktisch nur noch per SSH-Schlüssel erreichbar: Das anfängliche Passwort wird auf einen Zufallswert gedreht und das Schlüsselmaterial liegt unter `/home/pull_user/.ssh`.
+5. Der Schlüsseltausch läuft per Passwort-Auth (`sshpass` als `pull_user`) und schreibt den Public Key in `authorized_keys`. Anschließend wird dieser Eintrag ersetzt durch einen erzwungenen rrsync-Call (`command="rrsync -ro /data/encrypted_stage",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty`), sodass ausschließlich rsync-Pulls auf das Staging erlaubt sind.
 
 Die relevanten Variablen können über Umgebungsvariablen gesteuert werden:
 
