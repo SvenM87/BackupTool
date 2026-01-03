@@ -28,6 +28,22 @@ Weitere Parameter:
 - `REMOTE_REPO_PATH` – Pfad zum Restic-Repo auf dem Client (Standard: `/data/encrypted_stage`)
 - `LOCAL_REPO_PATH` – Zielpfad im Server-Container (Standard: `/data/restic_repo`)
 
+## Wöchentlicher Statusbericht per Mail
+
+Der Server-Container schickt einmal pro Woche automatisch einen Statusbericht zum Backup-Repository (Cron-Job, Standard: Montag 06:00 Uhr). Die Mail enthält Pfad, Anzahl Snapshot-Dateien, letzte Änderung und Größe des Repos. Der Versand erfolgt über `msmtp`; konfiguriere dazu die folgenden Variablen beim Start des Containers (`docker compose up ...`):
+
+- `BACKUP_REPORT_TO` – Empfänger-Adresse (Pflicht für Mailversand)
+- `BACKUP_REPORT_FROM` – Absender-Adresse (Standard: `backup-report@<hostname>`)
+- `BACKUP_REPORT_SCHEDULE` – Cron-Expression, wann der Report laufen soll (Standard: `0 6 * * 1`)
+- `SMTP_HOST` – SMTP-Server (Pflicht)
+- `SMTP_PORT` – SMTP-Port (Standard: `587`)
+- `SMTP_USER` / `SMTP_PASSWORD` – Zugangsdaten (optional, aktiviert Auth wenn gesetzt)
+- `SMTP_TLS` / `SMTP_STARTTLS` – TLS/STARTTLS-Schalter (`on`/`off`, Standard: `on`)
+
+Im End-to-End-Setup werden diese Werte nicht mehr über Docker-Umgebungsvariablen gesetzt, sondern über `tests/e2e/backup_report.env` bereitgestellt und als `/etc/backup_report.env` in den Server-Container gemountet. Passe die Datei vor dem Start an, falls der Mailversand in der Testumgebung aktiv sein soll.
+
+Der Cron-Job und die SMTP-Konfiguration werden beim Container-Start anhand dieser Variablen erzeugt; Logs liegen unter `/var/log/backup_report.log`. Ein manueller Versand ist jederzeit möglich: `docker compose exec server /usr/local/bin/backup_report.sh`.
+
 ## Manuelles Testen mit Docker
 
 1. Stack bauen und im Hintergrund starten: `docker-compose up --build -d`.
@@ -50,5 +66,6 @@ Es gibt einen automatisierten Testlauf, der den kompletten Ablauf (Schlüsseltau
 3. Das Skript stoppt vorhandene Container des Projekts (`poc_backup_e2e`), räumt `tests/tmp` auf und baut die Images frisch, bevor der Stack im Hintergrund startet.
 4. Nach dem Start setzt das Skript die benötigten ACLs zur Laufzeit, initialisiert ein Restic-Repository und sichert die vorkonfigurierten Testdaten unter `/home/user/testdata` (aus `client/data/user_home`) verschlüsselt nach `/data/encrypted_stage`.
 5. Anschließend werden `setup_server.sh` sowie `pull_restic_repo.sh` (im Container als `pull_user`) ausgeführt; der Lauf validiert, dass das Repository auf dem Server ankommt und keine Klartextmarker (`E2E_SECRET_TEST_PAYLOAD`) enthalten sind. Die Container bleiben danach bewusst aktiv, um eine manuelle Analyse zu ermöglichen; zur Bereinigung kann `docker compose -p poc_backup_e2e down -v` verwendet werden.
+6. Die Mail-Konfiguration für den Report wird für den E2E-Stack aus `tests/e2e/backup_report.env` gelesen und als `/etc/backup_report.env` in den Server-Container eingebunden.
 
 Da die Bereinigung (`sudo rm -rf tests/tmp`) mit erhöhten Rechten arbeitet, kann zu Beginn des Laufs eine lokale Passworteingabe für `sudo` erforderlich sein. Das für den Test verwendete Restic-Passwort lässt sich über `RESTIC_PASSWORD_VALUE`, der Compose-Projektname über `PROJECT_NAME` steuern. Weitere Variablen wie `PULL_USER_PASSWORD` sowie vorbereitete UID/GID-Overrides (`LOCAL_UID`, `LOCAL_GID`) können bei Bedarf vor dem Aufruf gesetzt werden.

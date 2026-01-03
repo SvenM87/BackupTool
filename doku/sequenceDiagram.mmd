@@ -1,0 +1,32 @@
+sequenceDiagram
+    autonumber
+    participant Attacker as 💀 Angreifer
+    participant Client as 💻 Primärsystem
+    participant Backup as 💾 Backup-Server (Repo)
+
+    rect rgb(255, 240, 240)
+    Note over Attacker, Client: Phase 1: Infiltration
+    Attacker->>Client: Infektion & Lateral Movement
+    Attacker->>Client: Suche nach Credentials (z.B. für Backup)
+    end
+
+    rect rgb(255, 230, 230)
+    Note over Client, Backup: Phase 2: Angriff auf Backup
+    Attacker->>Client: Scan nach Netzlaufwerken/Repos
+    Client->>Backup: Zugriff mit Admin-Rechten
+    Attacker->>Backup: 🔥 Befehl: LÖSCHEN / VERSCHLÜSSELN
+    Note right of Backup: Ohne WORM/Append-Only:<br/>Daten sind jetzt verloren!
+    end
+
+    rect rgb(255, 220, 220)
+    Note over Attacker, Client: Phase 3: Verschlüsselung Client
+    Attacker->>Client: Verschlüsselung der lokalen Daten
+    Attacker->>Client: 📄 Lösegeldforderung (Ransom Note)
+    end
+
+    rect rgb(240, 240, 255)
+    Note over Client, Backup: Phase 4: Restore-Versuch
+    actor Admin
+    Admin->>Backup: Restore anfordern
+    Backup-->>Admin: ❌ FEHLER: Daten defekt/leer
+    end

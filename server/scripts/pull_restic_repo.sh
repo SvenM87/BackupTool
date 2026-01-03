@@ -30,7 +30,7 @@ else
     eval "${RSYNC_CMD}"
 fi
 
-echo -e "\n=> Setze Append-Only Attribut auf ${LOCAL_REPO_PATH} ..."
-chattr -R +a "${LOCAL_REPO_PATH}"
+# echo -e "\n=> Setze Append-Only Attribut auf ${LOCAL_REPO_PATH} ..."
+# chattr -R +a "${LOCAL_REPO_PATH}"
 
 echo -e "\n=> Synchronisierung abgeschlossen."

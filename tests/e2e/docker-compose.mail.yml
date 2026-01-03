@@ -1,0 +1,6 @@
+version: '3.8'
+
+services:
+  server:
+    volumes:
+      - ${MAIL_CONFIG_FILE}:/etc/backup_report.env:ro
