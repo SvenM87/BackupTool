@@ -135,7 +135,7 @@ Die Architektur der Testumgebung basiert auf einer Client-Server-Struktur, welch
 
 Für den Betrieb des Client-Containers ist die Konfiguration mehrerer Benutzerkonten erforderlich. Neben einem allgemeinen Systembenutzer (`user`) werden die dedizierten Nutzer `backup_encoder` (verschlüsselt und bereitet Daten vor) sowie `backup_puller` (stellt die verschlüsselten Artefakte bereit) angelegt. Die Software-Ausstattung des Containers wird zum Build-Zeitpunkt durch die Installation von OpenSSH-Server, sudo, nano, acl, rsync und restic erweitert. Der Einsatz von ACL ermöglicht eine fein-granulare Steuerung der Dateiberechtigungen. Die initialen Benutzerkonten, die für die Backup-Prozesse benötigt werden, werden durch ein Skript automatisiert erstellt und würden in einem produktiven System der einmaligen Initialisierung dienen.
 
-Der Server-Container setzt inzwischen auf Ubuntu 22.04 als Basisimage. Beim Build werden per `apt-get` die benötigten Tools (nano, openssh-client, sshpass, rsync) installiert und anschließend ein dedizierter Systembenutzer `pull_user` angelegt. Benutzername und Passwort lassen sich über die Build-Argumente `USERNAME` und `USER_PASSWORD` überschreiben; diesem Account gehört auch `/data/restic_repo`. Im Gegensatz zur ersten Iteration wird kein statisches Root-Schlüsselpaar mehr ins Image gebacken. Stattdessen erzeugt `setup_server.sh` beim ersten Aufruf automatisch ein Schlüsselpaar unter `/home/<USERNAME>/.ssh`, überträgt den Public Key per Passwort-Auth (`sshpass`), tauscht das anfängliche Passwort gegen einen Zufallswert aus und ersetzt den `authorized_keys`-Eintrag durch einen erzwungenen rrsync-Call (`command="rrsync -ro /data/encrypted_stage",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty`), sodass nur noch rsync-Pulls erlaubt sind. Alle serverseitigen Skripte laufen daher konsequent im Kontext dieses Nutzers (`docker compose exec -u <USERNAME> server …`). Der Container bleibt weiterhin mit `tail -f /dev/null` aktiv, um interaktive Tests zu ermöglichen.
+Der Server-Container setzt auf Ubuntu 22.04 als Basisimage. Beim Start schreibt `entrypoint.sh` die `msmtp`-Konfiguration, richtet `/etc/backup_report.env` (falls nicht vorhanden) und den Cron-Job für den Wochenreport ein. `setup_server.sh` muss einmalig als root ausgeführt werden: Das Skript installiert openssh-client/sshpass/rsync, legt den Pull-User (Standard `backup_puller`, steuerbar über `PULL_USER`) an, erzeugt ein Schlüsselpaar, überträgt den Public Key per Passwort-Auth, dreht das Initialpasswort auf einen Zufallswert und ersetzt `authorized_keys` durch eine rrsync-Restriktion (`command="rrsync -ro /data/encrypted_stage",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty`). Der Container läuft über den Cron-Dienst weiter (kein `tail`-Keepalive mehr).
 
 Für reproduzierbare Tests werden beim Build statische Testdaten aus `client/data/user_home` in das Home-Verzeichnis des Nutzers kopiert. Das `setup_client.sh`-Script, das sowohl die Systemnutzer anlegt als auch die ACLs vorbereitet, befindet sich in `client/scripts/`. Die Host-Volumes in `docker-compose.yml` bleiben standardmäßig auskommentiert, damit der PoC komplett im Container läuft; bei Bedarf können sie manuell reaktiviert und über Umgebungsvariablen befüllt werden.
 
@@ -152,21 +152,16 @@ Es wurde eine 10GB Textdatei mit `yes "Lorem ipsum blablabla..." | head -n 43000
 
 #### mauneller Test
 Der Client bringt bereits eine kleine Testdatensammlung unter `/home/user/testdata` mit, sodass die Verschlüsselung ohne vorbereitende Host-Volumes nachvollzogen werden kann.
-1. Stack bauen und starten  
-   - `docker-compose up --build -d`  
-   - Sobald die Container laufen, lassen sich Logs per `docker-compose logs -f` prüfen.
-2. Testdaten auf dem Client anlegen  
-   - `docker exec -it -u user backup_client bash`  
-   - `nano ~/test.txt` und Beispielinhalt speichern.  
-   - `cat ~/test.txt` sicherstellt, dass die Datei verfügbar ist.
-3. Wechsel und Berechtigungen für `backup_encoder` prüfen  
-   - Innerhalb des Containers: `sudo -u backup_encoder bash`.  
-   - Lesen funktioniert (`cat /home/user/test.txt`), Schreiben wird verweigert (`nano /home/user/test.txt` → *Permission denied*).  
-   - Kopieren in das verschlüsselte Staging: `cp /home/user/* /data/encrypted_stage/` und anschließend `ls /data/encrypted_stage/`.
-4. SSH-Schlüsseltausch und Pull testen  
-   - `docker exec -it -u pull_user backup_server bash` und `/usr/local/bin/setup_server.sh` ausführen. Das Skript legt bei Bedarf ein Schlüsselpaar unter `~/.ssh` des Service-Accounts an, schiebt den Public Key via Passwort-Auth (`sshpass`) auf den Client, dreht das initiale Passwort auf einen Zufallswert und schreibt `authorized_keys` auf `command="rrsync -ro /data/encrypted_stage",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty` um.  
-   - `docker exec -it -u backup_puller backup_client bash`, `cat ~/.ssh/authorized_keys` zur Kontrolle und optional `sudo passwd -S backup_puller`, um die Passwortänderung zu prüfen. SSH-Befehle ohne rsync-Handshake schlagen erwartungsgemäß fehl (rrsync beendet die Verbindung).  
-   - Vom Server aus den Zugriff prüfen, z. B. mit `docker exec -it -u pull_user backup_server bash -c "ssh backup_puller@client 'ls /data/encrypted_stage'"` oder direkt `/usr/local/bin/pull_restic_repo.sh` starten.
+1. Stack bauen und starten: `docker compose up --build -d`.  
+2. Client vorbereiten (installiert Pakete, legt `backup_encoder`/`backup_puller` an, setzt ACLs, erzeugt temporäres Passwort):\
+   `docker compose exec -T -u user client bash -lc "echo 123456 | sudo -S ~/setup_client.sh"`\
+   Das Passwort steht zwischen `<:` und `:>` in der Ausgabe.  
+3. SSHD im Client starten: `docker compose exec -d client /usr/sbin/sshd -D`.  
+4. Restic-Repo im Client initialisieren und Testdaten sichern (Beispiel):\
+   `docker compose exec -T -u backup_encoder client bash -lc "export RESTIC_PASSWORD='demo'; if [ ! -f /data/encrypted_stage/config ]; then restic -r /data/encrypted_stage init --no-cache; fi; restic -r /data/encrypted_stage backup /home/user/testdata --no-cache"`.  
+5. SSH-Schlüsseltausch und Pull testen:\
+   `docker compose exec -T -e "PULL_USER_PASSWORD=<passwort>" server /usr/local/bin/setup_server.sh` (erstellt Schlüssel, dreht Passwort) und anschließend `docker compose exec server /usr/local/bin/pull_restic_repo.sh`.\
+   SSH-Befehle ohne rsync-Handshake schlagen erwartungsgemäß fehl (Restriktion durch rrsync).
 
 #### AUTOMATISIERTER TESTLAUF
 Für wiederholbare Prüfungen existiert ein End-to-End-Skript (`tests/e2e/run.sh`), das den kompletten Ablauf inklusive Verschlüsselung, Schlüsseltausch und Repository-Sync automatisiert durchführt. Der Test setzt eine funktionsfähige Docker-Umgebung voraus und konfiguriert seine Arbeitsverzeichnisse vollständig innerhalb des Projektordners.
@@ -174,7 +169,7 @@ Für wiederholbare Prüfungen existiert ein End-to-End-Skript (`tests/e2e/run.sh
 1. Aufruf des Skripts: `tests/e2e/run.sh`. Vorab prüft der Lauf, ob `docker compose` oder `docker-compose` verfügbar ist.
 2. Bestehende Container des Compose-Projekts (`poc_backup_e2e`) werden gestoppt und entfernt; der Ordner `tests/tmp` wird mit `sudo rm -rf` bereinigt, um alte Artefakte zu löschen. Anschließend werden die Images mit `up -d --build` gestartet.
 3. Auf dem Client wartet das Skript auf den SSH-Dienst, setzt die ACLs erneut (da diese durch Volumes in der Laufzeit überschrieben geworden sein könnten), initialisiert das Restic-Repository und sichert die vorbereiteten Testdaten aus `/home/user/testdata` verschlüsselt nach `/data/encrypted_stage`.
-4. Danach laufen `setup_server.sh` und `pull_restic_repo.sh`. Beide Skripte werden im Server-Container als `pull_user` aufgerufen, sodass Schlüsselmaterial und `known_hosts` im richtigen Home landen. Der Test validiert, dass die Sync-Ziele existieren, dass im übertragenen Repository keine Klartextmarker (`E2E_SECRET_TEST_PAYLOAD`) verbleiben und dass SSH-Befehle ohne rsync-Handshake vom Client abgewiesen werden.
-5. Nach erfolgreichem Durchlauf bleiben die Container zur weiteren Analyse aktiv. Eine manuelle Bereinigung erfolgt bei Bedarf via `docker-compose -p poc_backup_e2e down -v`.
+4. Danach laufen `setup_server.sh` (als root, legt den Pull-User an und tauscht den Schlüssel) und `pull_restic_repo.sh` (als `backup_puller`). Der Test validiert, dass die Sync-Ziele existieren, dass im übertragenen Repository keine Klartextmarker (`E2E_SECRET_TEST_PAYLOAD`) verbleiben und dass SSH-Befehle ohne rsync-Handshake vom Client abgewiesen werden.
+5. Nach erfolgreichem Durchlauf bleiben die Container zur weiteren Analyse aktiv. Eine manuelle Bereinigung erfolgt bei Bedarf via `docker compose -p poc_backup_e2e down -v`.
 
 Wichtige Parameter können weiterhin über Umgebungsvariablen gesetzt werden (`RESTIC_PASSWORD_VALUE`, `PROJECT_NAME`, `PULL_USER_PASSWORD`; vorbereitete Overrides für `LOCAL_UID` und `LOCAL_GID`). Für alternative Host-Pfade lassen sich die auskommentierten Volumes in `docker-compose.yml` aktivieren. Durch das Aufräumen per `sudo` kann beim Start des Skripts eine lokale Passworteingabe erforderlich sein.
