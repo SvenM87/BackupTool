@@ -7,22 +7,72 @@ set -e
 # Definitionen
 # Der Nutzer, der 'sudo' aufgerufen hat, ist der Besitzer der Daten
 DATA_OWNER=${SUDO_USER}
+if [ -z "${DATA_OWNER}" ]; then
+    echo "Dieses Skript muss via sudo ausgeführt werden (SUDO_USER leer)." >&2
+    exit 1
+fi
+
 FORMAT="\n\e[1;94m=> %s\e[0m\n"
+PROMPT_ENABLED=1
+[ -t 0 ] || PROMPT_ENABLED=0
+
+prompt_with_default() {
+    # $1 var name, $2 prompt, $3 default
+    local __var="$1" __prompt="$2" __default="$3" __input
+    if [ "${PROMPT_ENABLED}" -eq 1 ]; then
+        read -r -p "${__prompt} [${__default}]: " __input
+        __input=${__input:-${__default}}
+    else
+        __input=${__default}
+    fi
+    eval "${__var}=\"${__input}\""
+}
+
+prompt_password_optional() {
+    # $1 var name, $2 prompt, $3 generated fallback
+    local __var="$1" __prompt="$2" __fallback="$3" __input
+    if [ "${PROMPT_ENABLED}" -eq 1 ]; then
+        read -r -p "${__prompt} (leer = Zufallswert): " __input
+    else
+        __input=""
+    fi
+    if [ -z "${__input}" ]; then
+        __input="${__fallback}"
+    fi
+    eval "${__var}=\"${__input}\""
+}
 
 ENCODER_USER="backup_encoder"
-PULL_USER="backup_puller"
+PULL_USER_DEFAULT=${PULL_USER:-backup_puller}
+
 # Generiere ein zufälliges temporäres Passwort für den Pull-Nutzer (falls nicht über ENV gesetzt).
 # Zeichensatz: alphanumerisch und einige Sonderzeichen, Länge 12
 if [ -z "${PULL_USER_PASSWORD:-}" ]; then
-    PULL_USER_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9!@#$%&*()-_=+' < /dev/urandom | head -c 12)
+    GENERATED_PULL_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9!@#$%&*()-_=+' < /dev/urandom | head -c 12)
     # Fallback, falls tr nichts liefert
-    if [ -z "${PULL_USER_PASSWORD}" ]; then
-        PULL_USER_PASSWORD=$(openssl rand -base64 18 2>/dev/null || head -c 12 /dev/urandom | base64 | tr -d '\n')
+    if [ -z "${GENERATED_PULL_PASSWORD}" ]; then
+        GENERATED_PULL_PASSWORD=$(openssl rand -base64 18 2>/dev/null || head -c 12 /dev/urandom | base64 | tr -d '\n')
     fi
+else
+    GENERATED_PULL_PASSWORD="${PULL_USER_PASSWORD}"
 fi
 
-SOURCE_DIR="/home/${DATA_OWNER}"
-ENCRYPTED_DIR="/data/encrypted_stage"
+SOURCE_DIR_DEFAULT="/home/${DATA_OWNER}"
+ENCRYPTED_DIR_DEFAULT="/data/encrypted_stage"
+
+if [ "${PROMPT_ENABLED}" -eq 1 ]; then
+    printf "${FORMAT}" "Interaktives Setup: Werte können mit Enter bestätigt werden."
+fi
+
+prompt_with_default PULL_USER "Pull-Nutzer-Name" "${PULL_USER_DEFAULT}"
+prompt_with_default SOURCE_DIR "Pfad zu den zu sichernden Daten" "${SOURCE_DIR_DEFAULT}"
+prompt_with_default ENCRYPTED_DIR "Pfad für das verschlüsselte Restic-Repository" "${ENCRYPTED_DIR_DEFAULT}"
+
+if [ -n "${PULL_USER_PASSWORD:-}" ]; then
+    PULL_USER_PASSWORD="${PULL_USER_PASSWORD}"
+else
+    prompt_password_optional PULL_USER_PASSWORD "Temporäres Passwort für den Pull-Nutzer '${PULL_USER}'" "${GENERATED_PULL_PASSWORD}"
+fi
 
 # Benötigte Pakete installieren
 printf "${FORMAT}" "Installiere benötigte Pakete..."
@@ -98,6 +148,6 @@ sudo mkdir -p /var/run/sshd
 # Im finalen Script sollte der SSH-Dienst im Setup-Skript gestartet werden!
 # /usr/sbin/sshd -D
 
-printf "${FORMAT}" "Setup durch ${DATA_OWNER} erfolgreich abgeschlossen. Bitte notiere das temporäre Passwort für den Pull-Nutzer '${PULL_USER}': ${PULL_USER_PASSWORD}"# 
+printf "${FORMAT}" "Setup durch ${DATA_OWNER} abgeschlossen. Bitte notiere das temporäre Passwort für den Pull-Nutzer '${PULL_USER}': ${PULL_USER_PASSWORD}"
 # Marker zum Lesen des Passworts in den E2E-Tests
 printf "<:%s:>" "${PULL_USER_PASSWORD}"
