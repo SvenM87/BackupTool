@@ -1,5 +1,14 @@
 # Backup POC
 
+## Endnutzer-Bundle
+
+Für eine manuelle Installation ohne Docker ist ein Bundle vorbereitet:
+
+- Inhalte: `client/scripts/setup_client.sh`, `server/scripts/setup_server.sh`, `server/scripts/pull_restic_repo.sh`, `server/scripts/backup_report.sh`, plus Anleitung `doku/endnutzer-bundle.md`.
+- Ablage: `dist/enduser-bundle/` (gepackt als `dist/enduser-bundle.tar.gz`).
+- Nutzung: Bundle auf Client und Server entpacken. Auf dem Client `sudo client/scripts/setup_client.sh` ausführen, Pull-Passwort notieren. Auf dem Server `sudo server/scripts/setup_server.sh` ausführen und das notierte Passwort angeben, danach `sudo server/scripts/pull_restic_repo.sh` für den ersten Sync. Report-Cron gemäß Anleitung setzen.
+- Prompts: Beide Setup-Skripte fragen benötigte Parameter interaktiv ab (TTY erkannt), oder nutzen ENV/Defaults non-interaktiv.
+
 ## SSH-Schlüssel für den Pull-Nutzer bootstrappen
 
 1. Stack bauen und starten: `docker compose up -d --build` (alternativ `docker-compose`).

@@ -2,5 +2,5 @@ tests/tmp/*
 tests/Testdaten/*
 client/data/user_home/testdata/10GBfile.txt
 client/data/user_home/testdata/Kodi/
-
 tests/e2e/backup_report.env
+dist/

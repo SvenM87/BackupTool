@@ -1,0 +1,230 @@
+
+[1;94m-> Vorbereitung des Test-Workspaces...[0m
+
+[1;94m-> Bereinige Test-Workspace...[0m
+
+[1;94m-> Bereinigung abgeschlossen.[0m
+
+[1;94m-> Baue und starte Test-Stack...[0m
+Creating network "poc_backup_e2e_backup_net" with driver "bridge"
+Building client
+failed to fetch metadata: fork/exec /usr/local/lib/docker/cli-plugins/docker-buildx: no such file or directory
+
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  15.36kB
+Step 1/11 : FROM ubuntu:22.04
+ ---> 392fa14dddd0
+Step 2/11 : RUN apt-get update && apt-get install -y --no-install-recommends     sudo     nano
+ ---> Using cache
+ ---> 1faba4f9f6c8
+Step 3/11 : ARG USERNAME=user
+ ---> Using cache
+ ---> 1df0e9863750
+Step 4/11 : ARG USER_PASSWORD=123456
+ ---> Using cache
+ ---> f186401014ea
+Step 5/11 : RUN useradd -m -s /bin/bash ${USERNAME}     && echo "${USERNAME}:${USER_PASSWORD}" | chpasswd     && usermod -aG sudo ${USERNAME}
+ ---> Using cache
+ ---> e9fc23ce6e3a
+Step 6/11 : COPY data/user_home/ /home/${USERNAME}/
+ ---> Using cache
+ ---> 140620310bbb
+Step 7/11 : COPY scripts/setup_client.sh /home/${USERNAME}/setup_client.sh
+ ---> Using cache
+ ---> 823bdd0d563e
+Step 8/11 : RUN chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/ &&     chmod +x /home/${USERNAME}/setup_client.sh
+ ---> Using cache
+ ---> e819b681343b
+Step 9/11 : ENV PULL_USER_PASSWORD=${PULL_USER_PASSWORD}
+ ---> Using cache
+ ---> 6c72c2b17e65
+Step 10/11 : EXPOSE 22
+ ---> Using cache
+ ---> 2a730def1361
+Step 11/11 : CMD ["tail", "-f", "/dev/null"]
+ ---> Using cache
+ ---> 39948114b490
+[Warning] One or more build-args [PULL_USER_PASSWORD] were not consumed
+Successfully built 39948114b490
+Successfully tagged poc_backup_e2e_client:latest
+Building server
+failed to fetch metadata: fork/exec /usr/local/lib/docker/cli-plugins/docker-buildx: no such file or directory
+
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  31.74kB
+Step 1/10 : FROM ubuntu:22.04
+ ---> 392fa14dddd0
+Step 2/10 : RUN apt-get update && apt-get install -y     nano sudo cron msmtp-mta ca-certificates
+ ---> Using cache
+ ---> 750831d02901
+Step 3/10 : COPY scripts/setup_server.sh /usr/local/bin/setup_server.sh
+ ---> Using cache
+ ---> 59ce5662ee24
+Step 4/10 : RUN chmod +x /usr/local/bin/setup_server.sh
+ ---> Using cache
+ ---> 665763ff970b
+Step 5/10 : COPY scripts/pull_restic_repo.sh /usr/local/bin/pull_restic_repo.sh
+ ---> Using cache
+ ---> eee3ff2ac52e
+Step 6/10 : RUN chmod +x /usr/local/bin/pull_restic_repo.sh
+ ---> Using cache
+ ---> d984c09f40b5
+Step 7/10 : COPY scripts/backup_report.sh /usr/local/bin/backup_report.sh
+ ---> Using cache
+ ---> 446bcc2f786d
+Step 8/10 : COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+ ---> Using cache
+ ---> b73c8cd965c8
+Step 9/10 : RUN chmod +x /usr/local/bin/backup_report.sh /usr/local/bin/entrypoint.sh
+ ---> Using cache
+ ---> f85510bb74b1
+Step 10/10 : CMD ["/usr/local/bin/entrypoint.sh"]
+ ---> Using cache
+ ---> f0e304480f0a
+Successfully built f0e304480f0a
+Successfully tagged poc_backup_e2e_server:latest
+Creating backup_client ... 
+Creating backup_client ... done
+Creating backup_server ... 
+Creating backup_server ... done
+
+[1;94m-> Führe Client-Setup durch...[0m
+[sudo] password for user: debconf: delaying package configuration, since apt-utils is not installed
+
+[1;94m=> Installiere benötigte Pakete...[0m
+
+[1;94m=> Lege Backup-System-Nutzer an...[0m
+Adding system user `backup_encoder' (UID 106) ...
+Adding new group `backup_encoder' (GID 107) ...
+Adding new user `backup_encoder' (UID 106) with group `backup_encoder' ...
+Not creating home directory `/home/backup_encoder'.
+Adding system user `backup_puller' (UID 107) ...
+Adding new group `backup_puller' (GID 108) ...
+Adding new user `backup_puller' (UID 107) with group `backup_puller' ...
+Creating home directory `/home/backup_puller' ...
+
+[1;94m=> Konfiguriere Verzeichnisse und Berechtigungen...[0m
+
+[1;94m=> Richte gruppenbasierte Zugriffsrechte ein...[0m
+
+[1;94m=> Richte SSH-Zugang für den Pull-Nutzer ein...[0m
+
+[1;94m=> Richte SSH ein...[0m
+
+[1;94m=> Setup durch user abgeschlossen. Bitte notiere das temporäre Passwort für den Pull-Nutzer 'backup_puller': cMw)p3BTyYLa[0m
+<:cMw)p3BTyYLa:>
+
+[1;94m-> Starte SSHD...[0m
+
+[1;94m-> Prüfe, ob der Client-SSHD läuft...[0m
+
+[1;94m-> Führe Server-Setup durch...[0m
+
+[1;94m=> Installiere benötigte Pakete (openssh-client, sshpass, rsync, msmtp)...[0m
+debconf: delaying package configuration, since apt-utils is not installed
+
+[1;94m=> Erstelle lokalen PULL_USER 'backup_puller'...[0m
+
+[1;94m=> Lege Verzeichnisse an und setze Berechtigungen...[0m
+
+[1;94m=> Generiere neues SSH-Schlüsselpaar unter /home/backup_puller/.ssh/id_ed25519 (als backup_puller)...[0m
+Generating public/private ed25519 key pair.
+Your identification has been saved in /home/backup_puller/.ssh/id_ed25519
+Your public key has been saved in /home/backup_puller/.ssh/id_ed25519.pub
+The key fingerprint is:
+SHA256:tuqd1NxBlnhjbAHvky78nRliZQLC9TYb0G0AQ2lmBvI backup_puller@server
+The key's randomart image is:
++--[ED25519 256]--+
+|      . .oB=oo   |
+|       + .*B.oo  |
+|        E=o /.   |
+|         . X *   |
+|        S   B o  |
+|       . = o *   |
+|        o = = .  |
+|       + . + o + |
+|     .o o   . +  |
++----[SHA256]-----+
+
+[1;94m=> Schlüssel auf Client übertragen (per Passwort-Login)...[0m
+Warning: Permanently added 'client' (ED25519) to the list of known hosts.
+
+[1;94m=> SSH-Anmeldung mit Schlüssel (ohne Passwort) testen...[0m
+Key-Login OK
+
+[1;94m=> Passwort-Login für backup_puller unbrauchbar machen (Passwort auf Zufallswert drehen)...[0m
+Passwort geändert – bekanntes Initialpasswort ist jetzt ungültig.
+
+[1;94m=> Restriktionen für Schlüssel setzen (rrsync read-only)...[0m
+
+[1;94m=> Test: rsync-Pull mit Key und rrsync-Restriktion...[0m
+/usr/local/bin/setup_server.sh: 268: cannot create /etc/backup_report.env: Read-only file system
+
+[1;94m=> Schreibe /etc/backup_report.env...[0m
+
+[1;94m=> WARNUNG: Konnte /etc/backup_report.env nicht schreiben (ggf. read-only). Bitte manuell anlegen:\n/etc/backup_report.env[0m
+
+[1;94m=> Kein SMTP-Host angegeben – Mailversand deaktiviert.[0m
+
+[1;94m=> Server-Setup abgeschlossen. Pull-User: backup_puller. Lokales Repo: /data/restic_repo[0m
+
+[1;94m-> Verifiziere, dass andere Kommandos scheitern...[0m
+/usr/bin/rrsync error: SSH_ORIGINAL_COMMAND does not run rsync
+
+[1;94m-> Setze ACL-Berechtigungen (ACLs) zur Laufzeit...[0m
+
+[1;94m-> Initialisiere Restic-Repository und erstelle Backup...[0m
+created restic repository 5a3438152a at /data/encrypted_stage
+
+Please note that knowledge of your password is required to access
+the repository. Losing your password means that your data is
+irrecoverably lost.
+no parent snapshot found, will read all files
+
+Files:           2 new,     0 changed,     0 unmodified
+Dirs:            3 new,     0 changed,     0 unmodified
+Added to the repo: 2.483 KiB
+
+processed 2 files, 90 B in 0:00
+snapshot 2e0f8f74 saved
+ID        Time                 Host        Tags        Paths
+--------------------------------------------------------------------------
+2e0f8f74  2026-01-04 13:22:30  client                  /home/user/testdata
+--------------------------------------------------------------------------
+1 snapshots
+
+[1;94m-> Korrigiere ACL-Maske für rsync...[0m
+
+[1;94m-> Synchronisiere Restic-Repository...[0m
+-e 
+=> Synchronisiere Restic-Repository von backup_puller@client:/data/encrypted_stage nach /data/restic_repo ...
+-e 
+=> Synchronisierung abgeschlossen.
+
+[1;94m-> Prüfe synchronisierte Dateien...[0m
+
+[1;94m-> Trigger Backup-Report (Mailversand)...[0m
+Backup-Status poc_backup_e2e
+Status: OK
+Zeitpunkt: 2026-01-04T13:22:34+00:00
+Host: server
+
+Repository-Pfad: /data/restic_repo
+Repository vorhanden: ja
+Restic config vorhanden: ja
+Snapshot-Dateien: 1
+Letzte Änderung im Repo: 2026-01-04T13:22:31+00:00
+Geschätzte Größe: 1.1M
+Freier Speicher (Mount): 653G/1007G frei (32% belegt)
+Hinweise: keine
+2026-01-04T13:22:34+00:00 | Backup-Report per Mail versendet an sven.matzik@web.de.
+
+[1;94m-> Zeige Backup-Report-Log...[0m
+
+[1;94m-> End-to-End-Test erfolgreich abgeschlossen.[0m

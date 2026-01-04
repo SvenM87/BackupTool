@@ -139,6 +139,8 @@ Der Server-Container setzt auf Ubuntu 22.04 als Basisimage. Beim Start schreibt 
 
 Für reproduzierbare Tests werden beim Build statische Testdaten aus `client/data/user_home` in das Home-Verzeichnis des Nutzers kopiert. Das `setup_client.sh`-Script, das sowohl die Systemnutzer anlegt als auch die ACLs vorbereitet, befindet sich in `client/scripts/`. Die Host-Volumes in `docker-compose.yml` bleiben standardmäßig auskommentiert, damit der PoC komplett im Container läuft; bei Bedarf können sie manuell reaktiviert und über Umgebungsvariablen befüllt werden.
 
+Für eine Endnutzer-Installation außerhalb von Docker gibt es ein Bundle unter `dist/enduser-bundle/` (Tarball `dist/enduser-bundle.tar.gz`) mit den Setup-/Pull-/Report-Skripten sowie einer kurzen Anleitung (`doku/endnutzer-bundle.md`). Die Setup-Skripte erkennen TTYs und fragen Parameter interaktiv ab; ohne TTY greifen sie auf ENV/Defaults zurück.
+
 Quellen:
 - Docker Compose Referenz: https://docs.docker.com/reference/compose-file/
 - Dockerfile Dokumentation: https://docs.docker.com/get-started/docker-concepts/building-images/writing-a-dockerfile/
